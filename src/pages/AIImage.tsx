@@ -5,19 +5,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { aiService, AIImageResponse } from '@/services/ai.service'
-import { Wand2, Loader2, Image as ImageIcon, Download, Trash2, BarChart3, Package, Sparkles } from 'lucide-react'
+import { Wand2, Loader2, Image as ImageIcon, Download, BarChart3, Package, Sparkles } from 'lucide-react'
 import api from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
-import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-
 export default function AIImage() {
   const [prompt, setPrompt] = useState('')
   const [logoFile, setLogoFile] = useState<File | null>(null)

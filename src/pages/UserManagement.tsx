@@ -31,7 +31,7 @@ import { Badge } from '@/components/ui/badge'
 import { authService, User } from '@/services/auth.service'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
-import { Plus, Pencil, Trash2, Users, Search } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search } from 'lucide-react'
 
 export default function UserManagement() {
   const [users, setUsers] = useState<User[]>([])

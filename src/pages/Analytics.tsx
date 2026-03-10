@@ -21,7 +21,7 @@ import {
   AreaChart,
   Area
 } from 'recharts'
-import { TrendingUp, Users, Package, DollarSign, Activity } from 'lucide-react'
+import { TrendingUp, Users, Package, Activity } from 'lucide-react'
 
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#00ff00']
 

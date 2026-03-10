@@ -18,7 +18,6 @@ import {
   Clock,
   Package,
   AlertTriangle,
-  TrendingUp,
   CheckCircle2,
   XCircle,
   Activity
@@ -31,11 +30,9 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
-  Line,
-  Legend
+  Legend,
+  Cell
 } from 'recharts'
-import { format } from 'date-fns'
 
 export default function ManagerDashboard() {
   const [attendance, setAttendance] = useState<Attendance[]>([])
@@ -196,7 +193,7 @@ export default function ManagerDashboard() {
                 <Tooltip />
                 <Bar dataKey="value">
                   {attendanceChartData.map((entry, index) => (
-                    <Bar key={index} fill={entry.color} />
+                    <Cell key={index} fill={entry.color} />
                   ))}
                 </Bar>
               </BarChart>
