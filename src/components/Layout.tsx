@@ -21,7 +21,7 @@ import {
   Sun,
   Monitor
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import {
   DropdownMenu,
@@ -101,17 +101,42 @@ export default function Layout({ children }: LayoutProps) {
   }
   const navigation = getNavigation()
 
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)')
+    const onChange = () => {
+      if (mq.matches) setMobileMenuOpen(false)
+    }
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [mobileMenuOpen])
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Sidebar */}
-      <div className="fixed inset-y-0 left-0 z-50 w-64 border-r bg-card">
-        <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between h-16 px-6 border-b">
+      {/* Sidebar: drawer on mobile, fixed on lg+ */}
+      <div
+        className={cn(
+          'fixed inset-y-0 left-0 z-50 w-64 max-w-[min(100vw,16rem)] border-r bg-card shadow-xl transition-transform duration-300 ease-out lg:shadow-none',
+          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full',
+          'lg:translate-x-0',
+          !mobileMenuOpen && 'max-lg:pointer-events-none'
+        )}
+      >
+        <div className="flex h-full flex-col">
+          <div className="flex h-16 shrink-0 items-center justify-between border-b px-4 sm:px-6">
             <h1 className="text-xl font-bold">Sportify</h1>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
+                  <Button variant="ghost" size="icon" type="button">
                     {theme === 'light' ? (
                       <Sun className="h-5 w-5" />
                     ) : theme === 'dark' ? (
@@ -137,16 +162,20 @@ export default function Layout({ children }: LayoutProps) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
                 className="lg:hidden"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                onClick={() => setMobileMenuOpen(false)}
+                aria-label="Close menu"
               >
-                {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-              </button>
+                <X className="h-6 w-6" />
+              </Button>
             </div>
           </div>
           
-          <nav className="flex-1 px-4 py-6 space-y-2">
+          <nav className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-6">
             {navigation.map((item) => {
               const isActive = location.pathname === item.href
               return (
@@ -176,7 +205,10 @@ export default function Layout({ children }: LayoutProps) {
             <Button
               variant="outline"
               className="w-full"
-              onClick={handleLogout}
+              onClick={() => {
+                setMobileMenuOpen(false)
+                handleLogout()
+              }}
             >
               <LogOut className="mr-2 h-4 w-4" />
               Logout
@@ -187,15 +219,30 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Main content */}
       <div className="lg:pl-64">
-        <main className="py-8 px-4 sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:hidden">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="shrink-0"
+            onClick={() => setMobileMenuOpen(true)}
+            aria-label="Open menu"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          <span className="truncate text-lg font-semibold">Sportify</span>
+        </header>
+        <main className="px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
           {children}
         </main>
       </div>
 
-      {/* Mobile menu overlay */}
+      {/* Mobile drawer backdrop */}
       {mobileMenuOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
+        <button
+          type="button"
+          aria-label="Close menu"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
