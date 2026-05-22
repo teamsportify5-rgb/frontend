@@ -6,8 +6,9 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { aiService, AIImageResponse } from '@/services/ai.service'
 import { Wand2, Loader2, Image as ImageIcon, Download, BarChart3, Package, Sparkles } from 'lucide-react'
-import api from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
+import { AuthenticatedImage } from '@/components/AuthenticatedImage'
+import { fetchImageBlob } from '@/lib/imageUrl'
 export default function AIImage() {
   const [prompt, setPrompt] = useState('')
   const [logoFile, setLogoFile] = useState<File | null>(null)
@@ -73,21 +74,9 @@ export default function AIImage() {
     }
   }
 
-  const getImageUrl = (imageUrl: string): string => {
-    // If it's already a full URL, return as is
-    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-      return imageUrl
-    }
-    // Otherwise, prepend the API base URL
-    const apiBaseUrl = api.defaults.baseURL || 'http://localhost:8000'
-    return `${apiBaseUrl}${imageUrl}`
-  }
-
   const handleDownload = async (imageUrl: string, promptText: string) => {
     try {
-      const fullUrl = getImageUrl(imageUrl)
-      const response = await fetch(fullUrl)
-      const blob = await response.blob()
+      const blob = await fetchImageBlob(imageUrl)
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
@@ -312,9 +301,9 @@ export default function AIImage() {
               <Label>Prompt:</Label>
               <p className="text-sm text-muted-foreground">{generatedImage.prompt_text}</p>
             </div>
-            <div className="relative rounded-lg border overflow-hidden bg-muted">
-              <img
-                src={getImageUrl(generatedImage.generated_image_url)}
+            <div className="relative rounded-lg border overflow-hidden bg-muted min-h-[200px]">
+              <AuthenticatedImage
+                src={generatedImage.generated_image_url}
                 alt={generatedImage.prompt_text}
                 className="w-full h-auto"
               />
@@ -329,7 +318,10 @@ export default function AIImage() {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => window.open(getImageUrl(generatedImage.generated_image_url), '_blank')}
+                onClick={async () => {
+                  const blob = await fetchImageBlob(generatedImage.generated_image_url)
+                  window.open(URL.createObjectURL(blob), '_blank')
+                }}
               >
                 <ImageIcon className="mr-2 h-4 w-4" />
                 Open in New Tab
@@ -356,8 +348,8 @@ export default function AIImage() {
               {images.map((image) => (
                 <Card key={image.image_id} className="overflow-hidden">
                   <div className="relative aspect-square bg-muted">
-                    <img
-                      src={getImageUrl(image.generated_image_url)}
+                    <AuthenticatedImage
+                      src={image.generated_image_url}
                       alt={image.prompt_text}
                       className="w-full h-full object-cover"
                     />
@@ -380,7 +372,10 @@ export default function AIImage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => window.open(getImageUrl(image.generated_image_url), '_blank')}
+                        onClick={async () => {
+                          const blob = await fetchImageBlob(image.generated_image_url)
+                          window.open(URL.createObjectURL(blob), '_blank')
+                        }}
                       >
                         <ImageIcon className="h-3 w-3" />
                       </Button>
