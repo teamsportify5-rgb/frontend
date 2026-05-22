@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { aiService, AIImageResponse } from '@/services/ai.service'
-import { Wand2, Loader2, Image as ImageIcon, Download, BarChart3, Package, Sparkles } from 'lucide-react'
+import { Wand2, Loader2, Image as ImageIcon, Download, BarChart3, Package, Sparkles, Trash2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { AuthenticatedImage } from '@/components/AuthenticatedImage'
 import { fetchImageBlob } from '@/lib/imageUrl'
@@ -17,6 +17,7 @@ export default function AIImage() {
   const [stockLoading, setStockLoading] = useState(false)
   const [images, setImages] = useState<AIImageResponse[]>([])
   const [generatedImage, setGeneratedImage] = useState<AIImageResponse | null>(null)
+  const [deletingImageId, setDeletingImageId] = useState<number | null>(null)
   const { toast } = useToast()
   const { user } = useAuth()
   const isAdminOrManager = user?.role === 'admin' || user?.role === 'manager'
@@ -71,6 +72,32 @@ export default function AIImage() {
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDelete = async (image: AIImageResponse) => {
+    if (!confirm('Delete this image? This cannot be undone.')) return
+
+    setDeletingImageId(image.image_id)
+    try {
+      await aiService.deleteImage(image.image_id)
+      if (generatedImage?.image_id === image.image_id) {
+        setGeneratedImage(null)
+      }
+      setImages((prev) => prev.filter((img) => img.image_id !== image.image_id))
+      toast({
+        title: 'Deleted',
+        description: 'Image removed successfully',
+      })
+    } catch (error: any) {
+      console.error('Error deleting image:', error)
+      toast({
+        title: 'Error',
+        description: error.response?.data?.detail || 'Failed to delete image',
+        variant: 'destructive',
+      })
+    } finally {
+      setDeletingImageId(null)
     }
   }
 
@@ -308,7 +335,7 @@ export default function AIImage() {
                 className="w-full h-auto"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 onClick={() => handleDownload(generatedImage.generated_image_url, generatedImage.prompt_text)}
@@ -325,6 +352,18 @@ export default function AIImage() {
               >
                 <ImageIcon className="mr-2 h-4 w-4" />
                 Open in New Tab
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={deletingImageId === generatedImage.image_id}
+                onClick={() => handleDelete(generatedImage)}
+              >
+                {deletingImageId === generatedImage.image_id ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="mr-2 h-4 w-4" />
+                )}
+                Delete
               </Button>
             </div>
           </CardContent>
@@ -366,6 +405,7 @@ export default function AIImage() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleDownload(image.generated_image_url, image.prompt_text)}
+                        title="Download"
                       >
                         <Download className="h-3 w-3" />
                       </Button>
@@ -376,8 +416,22 @@ export default function AIImage() {
                           const blob = await fetchImageBlob(image.generated_image_url)
                           window.open(URL.createObjectURL(blob), '_blank')
                         }}
+                        title="Open in new tab"
                       >
                         <ImageIcon className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={deletingImageId === image.image_id}
+                        onClick={() => handleDelete(image)}
+                        title="Delete"
+                      >
+                        {deletingImageId === image.image_id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3 w-3" />
+                        )}
                       </Button>
                     </div>
                   </CardContent>

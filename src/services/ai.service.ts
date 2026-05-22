@@ -44,6 +44,10 @@ export const aiService = {
     const response = await api.get<AIImageResponse[]>('/ai/images/all')
     return response.data
   },
+
+  async deleteImage(imageId: number): Promise<void> {
+    await api.delete(`/ai/images/${imageId}`)
+  },
 }
 
 
