@@ -19,9 +19,7 @@ export const aiService = {
     if (logoFile) {
       form.append('logo', logoFile)
     }
-    const response = await api.post<AIImageResponse>('/ai/image', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
+    const response = await api.post<AIImageResponse>('/ai/image', form)
     return response.data
   },
 
