@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,29 +32,33 @@ export default function Notifications() {
   const isManager = user?.role === 'manager'
   const canSendNotifications = isAdmin || isManager
 
-  const fetchUsers = async () => {
-    if (targetType === 'user' && users.length === 0) {
-      setLoadingUsers(true)
-      try {
-        const data = await authService.getUsers()
-        setUsers(data)
-      } catch (error) {
-        console.error('Error fetching users:', error)
-        toast({
-          title: 'Error',
-          description: 'Failed to fetch users',
-          variant: 'destructive',
-        })
-      } finally {
-        setLoadingUsers(false)
-      }
+  const fetchUsers = useCallback(async () => {
+    setLoadingUsers(true)
+    try {
+      const data = await authService.getUsers()
+      setUsers(data)
+    } catch (error) {
+      console.error('Error fetching users:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch users',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoadingUsers(false)
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    if (targetType === 'user') {
+      fetchUsers()
+    }
+  }, [targetType, fetchUsers])
 
   const handleTargetTypeChange = (value: string) => {
     setTargetType(value as 'all' | 'user')
-    if (value === 'user') {
-      fetchUsers()
+    if (value !== 'user') {
+      setSelectedUserId('')
     }
   }
 
@@ -193,6 +197,8 @@ export default function Notifications() {
                 <Label htmlFor="userId">Select User</Label>
                 {loadingUsers ? (
                   <div className="text-sm text-muted-foreground">Loading users...</div>
+                ) : users.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">No users found.</div>
                 ) : (
                   <Select
                     value={selectedUserId}
