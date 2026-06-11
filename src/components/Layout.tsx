@@ -57,6 +57,7 @@ const managerNavigation = [
 
 const accountantNavigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Attendance', href: '/attendance', icon: Clock },
   { name: 'Payroll', href: '/payroll', icon: DollarSign },
 ]
 
