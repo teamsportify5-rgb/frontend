@@ -250,7 +250,7 @@ export default function AIImage() {
             <CardTitle>Generate New Image</CardTitle>
           </div>
           <CardDescription>
-            Describe the image you want to generate. Optionally attach a logo to overlay on top of the result (e.g. pack of shirts with your logo).
+            Garments and apparel only — describe clothing, fabrics, uniforms, or textile products (e.g. cotton polo shirts, fabric rolls). Non-garment images are blocked.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -259,7 +259,7 @@ export default function AIImage() {
               <Label htmlFor="prompt">Image Prompt</Label>
               <Input
                 id="prompt"
-                placeholder="e.g., A pack of premium white t-shirts on a clean background"
+                placeholder="e.g., Navy blue cotton polo shirts stacked in a garment factory"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 disabled={loading}

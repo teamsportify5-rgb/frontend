@@ -31,7 +31,7 @@ import { Badge } from '@/components/ui/badge'
 import { authService, User } from '@/services/auth.service'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
-import { Plus, Pencil, Trash2, Search } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, KeyRound } from 'lucide-react'
 
 export default function UserManagement() {
   const [users, setUsers] = useState<User[]>([])
@@ -39,6 +39,11 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [resetDialogOpen, setResetDialogOpen] = useState(false)
+  const [resetPassword, setResetPassword] = useState('')
+  const [resetNotify, setResetNotify] = useState(true)
+  const [resetResult, setResetResult] = useState<string | null>(null)
+  const [resetting, setResetting] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [roleFilter, setRoleFilter] = useState<string>('all')
@@ -214,6 +219,38 @@ export default function UserManagement() {
       daily_rate: user.daily_rate?.toString() || '',
     })
     setEditDialogOpen(true)
+  }
+
+  const openResetDialog = (user: User) => {
+    setSelectedUser(user)
+    setResetPassword('')
+    setResetNotify(true)
+    setResetResult(null)
+    setResetDialogOpen(true)
+  }
+
+  const handleResetPassword = async () => {
+    if (!selectedUser) return
+    setResetting(true)
+    try {
+      const result = await authService.resetPassword(selectedUser.id, {
+        new_password: resetPassword.trim() || undefined,
+        notify: resetNotify,
+      })
+      setResetResult(result.new_password)
+      toast({
+        title: 'Password reset',
+        description: result.message,
+      })
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.detail || 'Failed to reset password',
+        variant: 'destructive',
+      })
+    } finally {
+      setResetting(false)
+    }
   }
 
   const resetForm = () => {
@@ -428,6 +465,14 @@ export default function UserManagement() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            onClick={() => openResetDialog(user)}
+                            title="Reset password"
+                          >
+                            <KeyRound className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => openEditDialog(user)}
                           >
                             <Pencil className="h-4 w-4" />
@@ -540,6 +585,61 @@ export default function UserManagement() {
               Cancel
             </Button>
             <Button onClick={handleUpdate}>Update User</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+            <DialogDescription>
+              {selectedUser
+                ? `Set a new password for ${selectedUser.name}. The user can be notified via push notification (free, no email required).`
+                : 'Reset user password'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="reset_password">New password (optional)</Label>
+              <Input
+                id="reset_password"
+                type="text"
+                value={resetPassword}
+                onChange={(e) => setResetPassword(e.target.value)}
+                placeholder="Leave blank to auto-generate"
+                disabled={resetting || !!resetResult}
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={resetNotify}
+                onChange={(e) => setResetNotify(e.target.checked)}
+                disabled={resetting || !!resetResult}
+              />
+              Notify user via push notification with the new password
+            </label>
+            {resetResult && (
+              <div className="rounded-md border bg-muted p-3 text-sm">
+                <p className="font-medium text-gray-900">New password</p>
+                <p className="mt-1 font-mono text-base select-all">{resetResult}</p>
+                <p className="mt-2 text-muted-foreground">
+                  Share this with the user if push notification was not delivered.
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResetDialogOpen(false)}>
+              {resetResult ? 'Close' : 'Cancel'}
+            </Button>
+            {!resetResult && (
+              <Button onClick={handleResetPassword} disabled={resetting}>
+                {resetting ? 'Resetting...' : 'Reset password'}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

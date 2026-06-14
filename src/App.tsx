@@ -77,6 +77,66 @@ function App() {
             }
           />
           <Route
+            path="/dashboard/admin"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <RoleProtectedRoute allowedRoles={['admin']} roleLabel="Admin">
+                    <Dashboard />
+                  </RoleProtectedRoute>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/manager"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <RoleProtectedRoute allowedRoles={['manager']} roleLabel="Manager">
+                    <ManagerDashboard />
+                  </RoleProtectedRoute>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/accountant"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <RoleProtectedRoute allowedRoles={['accountant']} roleLabel="Accountant">
+                    <AccountantDashboard />
+                  </RoleProtectedRoute>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/worker"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <RoleProtectedRoute allowedRoles={['worker']} roleLabel="Worker">
+                    <WorkerDashboard />
+                  </RoleProtectedRoute>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/customer"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <RoleProtectedRoute allowedRoles={['customer']} roleLabel="Customer">
+                    <CustomerDashboard />
+                  </RoleProtectedRoute>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/orders"
             element={
               <ProtectedRoute>

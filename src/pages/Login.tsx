@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
+import { authService } from '@/services/auth.service'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -10,6 +11,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
@@ -20,6 +29,9 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [forgotOpen, setForgotOpen] = useState(false)
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetSubmitting, setResetSubmitting] = useState(false)
   const { login } = useAuth()
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -34,6 +46,40 @@ export default function Login() {
       // Error handled in auth context
     } finally {
       setLoading(false)
+    }
+  }
+
+  const openForgotDialog = () => {
+    setResetEmail(email.trim())
+    setForgotOpen(true)
+  }
+
+  const handleRequestReset = async () => {
+    if (!resetEmail.trim()) {
+      toast({
+        title: 'Email required',
+        description: 'Enter the email address for your account.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setResetSubmitting(true)
+    try {
+      const result = await authService.requestPasswordReset(resetEmail.trim())
+      toast({
+        title: 'Request sent',
+        description: result.message,
+      })
+      setForgotOpen(false)
+    } catch (error: any) {
+      toast({
+        title: 'Request failed',
+        description: error.response?.data?.detail || 'Could not submit your request. Try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setResetSubmitting(false)
     }
   }
 
@@ -92,10 +138,7 @@ export default function Login() {
                     className="text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline transition-colors"
                     onClick={(e) => {
                       e.preventDefault()
-                      toast({
-                        title: "Forgot Password",
-                        description: "Please contact your administrator to reset your password.",
-                      })
+                      openForgotDialog()
                     }}
                     disabled={loading}
                   >
@@ -153,6 +196,36 @@ export default function Login() {
             </p>
           </CardFooter>
         </Card>
+
+        <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Request password reset</DialogTitle>
+              <DialogDescription>
+                Enter your account email. An administrator will be notified via push notification and can reset your password from User Management.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 py-2">
+              <Label htmlFor="reset_email">Email address</Label>
+              <Input
+                id="reset_email"
+                type="email"
+                placeholder="you@example.com"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                disabled={resetSubmitting}
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setForgotOpen(false)} disabled={resetSubmitting}>
+                Cancel
+              </Button>
+              <Button onClick={handleRequestReset} disabled={resetSubmitting}>
+                {resetSubmitting ? 'Sending...' : 'Notify admin'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Footer Info */}
         <div className="mt-6 text-center">

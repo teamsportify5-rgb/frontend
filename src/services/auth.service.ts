@@ -38,9 +38,29 @@ export interface AuthResponse {
   token_type: string
 }
 
+export interface PasswordResetRequest {
+  new_password?: string
+  notify?: boolean
+}
+
+export interface PasswordResetResponse {
+  message: string
+  new_password: string
+  notified: boolean
+}
+
+export interface PasswordResetRequestAck {
+  message: string
+}
+
 export const authService = {
   login: async (data: LoginRequest): Promise<AuthResponse> => {
     const response = await api.post<AuthResponse>('/auth/login', data)
+    return response.data
+  },
+
+  requestPasswordReset: async (email: string): Promise<PasswordResetRequestAck> => {
+    const response = await api.post<PasswordResetRequestAck>('/auth/request-password-reset', { email })
     return response.data
   },
 
@@ -67,6 +87,11 @@ export const authService = {
 
   deleteUser: async (userId: number): Promise<void> => {
     await api.delete(`/auth/users/${userId}`)
+  },
+
+  resetPassword: async (userId: number, data: PasswordResetRequest): Promise<PasswordResetResponse> => {
+    const response = await api.post<PasswordResetResponse>(`/auth/users/${userId}/reset-password`, data)
+    return response.data
   },
 }
 

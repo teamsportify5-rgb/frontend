@@ -1,12 +1,15 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
+import { AccessDenied } from '@/components/AccessDenied'
 
 interface RoleProtectedRouteProps {
   children: React.ReactNode
   allowedRoles: string[]
+  /** Human-readable label for the denied message, e.g. "Manager" */
+  roleLabel?: string
 }
 
-export function RoleProtectedRoute({ children, allowedRoles }: RoleProtectedRouteProps) {
+export function RoleProtectedRoute({ children, allowedRoles, roleLabel }: RoleProtectedRouteProps) {
   const { user, loading } = useAuth()
 
   if (loading) {
@@ -24,7 +27,12 @@ export function RoleProtectedRoute({ children, allowedRoles }: RoleProtectedRout
   }
 
   if (!allowedRoles.includes(user.role)) {
-    return <Navigate to="/dashboard" replace />
+    const label =
+      roleLabel ||
+      (allowedRoles.length === 1
+        ? allowedRoles[0].charAt(0).toUpperCase() + allowedRoles[0].slice(1)
+        : allowedRoles.join(', '))
+    return <AccessDenied requiredRole={label} />
   }
 
   return <>{children}</>
