@@ -318,7 +318,7 @@ export default function UserManagement() {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="john@example.com"
+                  placeholder="john@sportify.com or name@factory.com"
                 />
               </div>
               <div className="space-y-2">
@@ -619,7 +619,7 @@ export default function UserManagement() {
                 onChange={(e) => setResetNotify(e.target.checked)}
                 disabled={resetting || !!resetResult}
               />
-              Notify user via push notification with the new password
+                Notify user via push (they must change password after signing in with the temporary password)
             </label>
             {resetResult && (
               <div className="rounded-md border bg-muted p-3 text-sm">

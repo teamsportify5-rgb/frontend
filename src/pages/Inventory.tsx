@@ -22,12 +22,28 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Warehouse, Plus, AlertTriangle, Package, Pencil, Trash2 } from 'lucide-react'
-import { inventoryService, Inventory as InventoryType, CreateInventory } from '@/services/inventory.service'
+import {
+  inventoryService,
+  Inventory as InventoryType,
+  CreateInventory,
+  formatInventoryRs,
+  lineInventoryValue,
+} from '@/services/inventory.service'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 
+const emptyForm: CreateInventory = {
+  item: '',
+  category: '',
+  quantity: 0,
+  threshold: 0,
+  unit: 'pieces',
+  unit_price: 0,
+}
+
 export default function Inventory() {
   const [inventory, setInventory] = useState<InventoryType[]>([])
+  const [totalEstimatedValue, setTotalEstimatedValue] = useState(0)
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -35,13 +51,7 @@ export default function Inventory() {
   const { toast } = useToast()
   const { user } = useAuth()
 
-  const [formData, setFormData] = useState<CreateInventory>({
-    item: '',
-    category: '',
-    quantity: 0,
-    threshold: 0,
-    unit: 'pieces',
-  })
+  const [formData, setFormData] = useState<CreateInventory>(emptyForm)
 
   useEffect(() => {
     fetchInventory()
@@ -49,8 +59,12 @@ export default function Inventory() {
 
   const fetchInventory = async () => {
     try {
-      const data = await inventoryService.getAll()
+      const [data, summary] = await Promise.all([
+        inventoryService.getAll(),
+        inventoryService.getSummary(),
+      ])
       setInventory(data)
+      setTotalEstimatedValue(summary.total_estimated_value)
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -70,7 +84,7 @@ export default function Inventory() {
         description: 'Inventory item created successfully',
       })
       setDialogOpen(false)
-      setFormData({ item: '', category: '', quantity: 0, threshold: 0, unit: 'pieces' })
+      setFormData(emptyForm)
       fetchInventory()
     } catch (error: any) {
       toast({
@@ -91,7 +105,7 @@ export default function Inventory() {
       })
       setEditDialogOpen(false)
       setSelectedItem(null)
-      setFormData({ item: '', category: '', quantity: 0, threshold: 0, unit: 'pieces' })
+      setFormData(emptyForm)
       fetchInventory()
     } catch (error: any) {
       toast({
@@ -128,6 +142,7 @@ export default function Inventory() {
       quantity: item.quantity,
       threshold: item.threshold,
       unit: item.unit,
+      unit_price: item.unit_price ?? 0,
     })
     setEditDialogOpen(true)
   }
@@ -144,85 +159,111 @@ export default function Inventory() {
     }
   }
 
-  const lowStockItems = inventory.filter(item => item.quantity <= item.threshold)
+  const lowStockItems = inventory.filter((item) => item.quantity <= item.threshold)
   const totalItems = inventory.length
-  const totalValue = inventory.reduce((sum, item) => sum + (item.quantity * 10), 0) // Mock calculation
+
+  const unitPriceField = (idPrefix: string) => (
+    <div className="space-y-2">
+      <Label htmlFor={`${idPrefix}_unit_price`}>Unit price (Rs) *</Label>
+      <Input
+        id={`${idPrefix}_unit_price`}
+        type="number"
+        min={0}
+        step="0.01"
+        value={formData.unit_price}
+        onChange={(e) =>
+          setFormData({ ...formData, unit_price: parseFloat(e.target.value) || 0 })
+        }
+        placeholder="e.g. 250 per kg or per piece"
+      />
+      <p className="text-xs text-muted-foreground">
+        Cost per {formData.unit || 'unit'}. Line value = quantity × unit price.
+      </p>
+    </div>
+  )
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Inventory Management</h1>
-          <p className="text-gray-600 mt-2">Manage stock levels and inventory</p>
+          <p className="text-gray-600 mt-2">Manage stock levels and inventory value</p>
         </div>
         {(user?.role === 'admin' || user?.role === 'manager') && (
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Item
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Inventory Item</DialogTitle>
-              <DialogDescription>Add a new item to inventory</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="item">Item Name *</Label>
-                <Input
-                  id="item"
-                  value={formData.item}
-                  onChange={(e) => setFormData({ ...formData, item: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="category">Category *</Label>
-                <Input
-                  id="category"
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="quantity">Quantity *</Label>
-                  <Input
-                    id="quantity"
-                    type="number"
-                    value={formData.quantity}
-                    onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="threshold">Threshold *</Label>
-                  <Input
-                    id="threshold"
-                    type="number"
-                    value={formData.threshold}
-                    onChange={(e) => setFormData({ ...formData, threshold: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="unit">Unit *</Label>
-                <Input
-                  id="unit"
-                  value={formData.unit}
-                  onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                  placeholder="pieces, kg, liters, etc."
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancel
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Item
               </Button>
-              <Button onClick={handleAdd}>Add Item</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Inventory Item</DialogTitle>
+                <DialogDescription>Add a new item to inventory</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="item">Item Name *</Label>
+                  <Input
+                    id="item"
+                    value={formData.item}
+                    onChange={(e) => setFormData({ ...formData, item: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="category">Category *</Label>
+                  <Input
+                    id="category"
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="quantity">Quantity *</Label>
+                    <Input
+                      id="quantity"
+                      type="number"
+                      min={0}
+                      value={formData.quantity}
+                      onChange={(e) =>
+                        setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="threshold">Threshold *</Label>
+                    <Input
+                      id="threshold"
+                      type="number"
+                      min={0}
+                      value={formData.threshold}
+                      onChange={(e) =>
+                        setFormData({ ...formData, threshold: parseInt(e.target.value) || 0 })
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="unit">Unit *</Label>
+                  <Input
+                    id="unit"
+                    value={formData.unit}
+                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                    placeholder="pieces, kg, liters, etc."
+                  />
+                </div>
+                {unitPriceField('add')}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleAdd}>Add Item</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         )}
       </div>
 
@@ -256,8 +297,8 @@ export default function Inventory() {
             <Warehouse className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalValue.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Estimated value</p>
+            <div className="text-2xl font-bold">{formatInventoryRs(totalEstimatedValue)}</div>
+            <p className="text-xs text-muted-foreground">Σ quantity × unit price</p>
           </CardContent>
         </Card>
       </div>
@@ -266,57 +307,67 @@ export default function Inventory() {
       <Card>
         <CardHeader>
           <CardTitle>Inventory Items</CardTitle>
-          <CardDescription>Complete inventory list with stock levels</CardDescription>
+          <CardDescription>Stock levels and estimated line values</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="text-center py-8">Loading...</div>
           ) : (
             <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead>Threshold</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {inventory.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.item}</TableCell>
-                  <TableCell>{item.category}</TableCell>
-                  <TableCell>{item.quantity} {item.unit}</TableCell>
-                  <TableCell>{item.threshold} {item.unit}</TableCell>
-                  <TableCell>{getStatusBadge(item)}</TableCell>
-                  <TableCell>
-                    {(user?.role === 'admin' || user?.role === 'manager') && (
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditDialog(item)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        {user?.role === 'admin' && (
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Item</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Quantity</TableHead>
+                  <TableHead>Unit price</TableHead>
+                  <TableHead>Line value</TableHead>
+                  <TableHead>Threshold</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {inventory.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.item}</TableCell>
+                    <TableCell>{item.category}</TableCell>
+                    <TableCell>
+                      {item.quantity} {item.unit}
+                    </TableCell>
+                    <TableCell>{formatInventoryRs(item.unit_price ?? 0)}</TableCell>
+                    <TableCell className="font-medium">
+                      {formatInventoryRs(item.estimated_value ?? lineInventoryValue(item))}
+                    </TableCell>
+                    <TableCell>
+                      {item.threshold} {item.unit}
+                    </TableCell>
+                    <TableCell>{getStatusBadge(item)}</TableCell>
+                    <TableCell>
+                      {(user?.role === 'admin' || user?.role === 'manager') && (
+                        <div className="flex gap-2">
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleDelete(item.id)}
+                            onClick={() => openEditDialog(item)}
                           >
-                            <Trash2 className="h-4 w-4 text-red-600" />
+                            <Pencil className="h-4 w-4" />
                           </Button>
-                        )}
-                      </div>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                          {user?.role === 'admin' && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(item.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-600" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
@@ -351,8 +402,11 @@ export default function Inventory() {
                 <Input
                   id="edit_quantity"
                   type="number"
+                  min={0}
                   value={formData.quantity}
-                  onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -360,8 +414,11 @@ export default function Inventory() {
                 <Input
                   id="edit_threshold"
                   type="number"
+                  min={0}
                   value={formData.threshold}
-                  onChange={(e) => setFormData({ ...formData, threshold: parseInt(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, threshold: parseInt(e.target.value) || 0 })
+                  }
                 />
               </div>
             </div>
@@ -374,6 +431,7 @@ export default function Inventory() {
                 placeholder="pieces, kg, liters, etc."
               />
             </div>
+            {unitPriceField('edit')}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
@@ -386,4 +444,3 @@ export default function Inventory() {
     </div>
   )
 }
-

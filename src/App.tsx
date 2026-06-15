@@ -252,11 +252,9 @@ function App() {
             path="/notifications"
             element={
               <ProtectedRoute>
-                <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
-                  <Layout>
-                    <Notifications />
-                  </Layout>
-                </RoleProtectedRoute>
+                <Layout>
+                  <Notifications />
+                </Layout>
               </ProtectedRoute>
             }
           />

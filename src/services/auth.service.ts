@@ -21,6 +21,7 @@ export interface User {
   role: string
   phone?: string
   daily_rate?: number
+  must_change_password?: boolean
   created_at: string
 }
 
@@ -53,6 +54,11 @@ export interface PasswordResetRequestAck {
   message: string
 }
 
+export interface ChangePasswordRequest {
+  current_password: string
+  new_password: string
+}
+
 export const authService = {
   login: async (data: LoginRequest): Promise<AuthResponse> => {
     const response = await api.post<AuthResponse>('/auth/login', data)
@@ -71,6 +77,11 @@ export const authService = {
 
   getCurrentUser: async (): Promise<User> => {
     const response = await api.get<User>('/auth/me')
+    return response.data
+  },
+
+  changePassword: async (data: ChangePasswordRequest): Promise<User> => {
+    const response = await api.post<User>('/auth/change-password', data)
     return response.data
   },
 

@@ -29,6 +29,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { ForcePasswordChange } from '@/components/ForcePasswordChange'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -59,16 +60,19 @@ const accountantNavigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Attendance', href: '/attendance', icon: Clock },
   { name: 'Payroll', href: '/payroll', icon: DollarSign },
+  { name: 'Notifications', href: '/notifications', icon: Bell },
 ]
 
 const workerNavigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Attendance', href: '/attendance', icon: Clock },
+  { name: 'Notifications', href: '/notifications', icon: Bell },
 ]
 
 const customerNavigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Orders', href: '/orders', icon: Package },
+  { name: 'Notifications', href: '/notifications', icon: Bell },
   { name: 'Profile', href: '/profile', icon: User },
 ]
 
@@ -122,6 +126,7 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
+      <ForcePasswordChange />
       {/* Sidebar: drawer on mobile, fixed on lg+ */}
       <div
         className={cn(
