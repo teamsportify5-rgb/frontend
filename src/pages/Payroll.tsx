@@ -31,6 +31,7 @@ import { payrollService, Payroll as PayrollType, UpdatePayrollRequest } from '@/
 import { authService, User } from '@/services/auth.service'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
+import { settingsService } from '@/services/settings.service'
 import { Download, Plus, Pencil, RefreshCw, Trash2 } from 'lucide-react'
 
 export default function Payroll() {
@@ -46,6 +47,7 @@ export default function Payroll() {
   const [basicSalary, setBasicSalary] = useState<string>('')
   const [deductions, setDeductions] = useState<string>('')
   const [bonus, setBonus] = useState<string>('')
+  const [taxRate, setTaxRate] = useState(10)
   const [editFormData, setEditFormData] = useState<UpdatePayrollRequest>({
     days_present: 0,
     basic_salary: 0,
@@ -59,6 +61,10 @@ export default function Payroll() {
     fetchPayrolls()
     if (user?.role === 'admin' || user?.role === 'manager' || user?.role === 'accountant') {
       fetchWorkers()
+      settingsService
+        .get()
+        .then((data) => setTaxRate(data.tax_rate))
+        .catch(() => setTaxRate(10))
     }
   }, [user])
 
@@ -122,16 +128,36 @@ export default function Payroll() {
       const generateData: any = {}
       if (month) generateData.month = month
       if (daysPresent && daysPresent.trim() !== '') {
-        generateData.days_present = parseInt(daysPresent)
+        const days = parseInt(daysPresent, 10)
+        if (Number.isNaN(days) || days < 0) {
+          toast({ title: 'Validation Error', description: 'Days present cannot be negative', variant: 'destructive' })
+          return
+        }
+        generateData.days_present = days
       }
       if (basicSalary && basicSalary.trim() !== '') {
-        generateData.basic_salary = parseFloat(basicSalary)
+        const salary = parseFloat(basicSalary)
+        if (Number.isNaN(salary) || salary < 0) {
+          toast({ title: 'Validation Error', description: 'Basic salary cannot be negative', variant: 'destructive' })
+          return
+        }
+        generateData.basic_salary = salary
       }
       if (deductions && deductions.trim() !== '') {
-        generateData.deductions = parseFloat(deductions)
+        const ded = parseFloat(deductions)
+        if (Number.isNaN(ded) || ded < 0) {
+          toast({ title: 'Validation Error', description: 'Deductions cannot be negative', variant: 'destructive' })
+          return
+        }
+        generateData.deductions = ded
       }
       if (bonus && bonus.trim() !== '') {
-        generateData.bonus = parseFloat(bonus)
+        const b = parseFloat(bonus)
+        if (Number.isNaN(b) || b < 0) {
+          toast({ title: 'Validation Error', description: 'Bonus cannot be negative', variant: 'destructive' })
+          return
+        }
+        generateData.bonus = b
       }
 
       await payrollService.generate(selectedEmployee, Object.keys(generateData).length > 0 ? generateData : undefined)
@@ -169,6 +195,16 @@ export default function Payroll() {
 
   const handleUpdate = async () => {
     if (!selectedPayroll) return
+
+    const { days_present, basic_salary, deductions, bonus } = editFormData
+    if (days_present < 0 || basic_salary < 0 || deductions < 0 || bonus < 0) {
+      toast({
+        title: 'Validation Error',
+        description: 'Payroll amounts cannot be negative',
+        variant: 'destructive',
+      })
+      return
+    }
 
     try {
       await payrollService.update(selectedPayroll.payroll_id, editFormData)
@@ -354,6 +390,7 @@ export default function Payroll() {
                     <Input
                       id="days_present"
                       type="number"
+                      min={0}
                       value={daysPresent}
                       onChange={(e) => setDaysPresent(e.target.value)}
                       placeholder="Auto-calculated from attendance if blank"
@@ -364,6 +401,7 @@ export default function Payroll() {
                     <Input
                       id="basic_salary"
                       type="number"
+                      min={0}
                       step="0.01"
                       value={basicSalary}
                       onChange={(e) => setBasicSalary(e.target.value)}
@@ -375,10 +413,11 @@ export default function Payroll() {
                     <Input
                       id="deductions"
                       type="number"
+                      min={0}
                       step="0.01"
                       value={deductions}
                       onChange={(e) => setDeductions(e.target.value)}
-                      placeholder="Auto-calculated (10% of basic) if blank"
+                      placeholder={`Auto-calculated (${taxRate}% of basic salary) if blank`}
                     />
                   </div>
                   <div className="space-y-2">
@@ -386,6 +425,7 @@ export default function Payroll() {
                     <Input
                       id="bonus"
                       type="number"
+                      min={0}
                       step="0.01"
                       value={bonus}
                       onChange={(e) => setBonus(e.target.value)}
@@ -524,8 +564,14 @@ export default function Payroll() {
               <Input
                 id="edit_days_present"
                 type="number"
+                min={0}
                 value={editFormData.days_present}
-                onChange={(e) => setEditFormData({ ...editFormData, days_present: parseInt(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setEditFormData({
+                    ...editFormData,
+                    days_present: Math.max(0, parseInt(e.target.value, 10) || 0),
+                  })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -533,9 +579,15 @@ export default function Payroll() {
               <Input
                 id="edit_basic_salary"
                 type="number"
+                min={0}
                 step="0.01"
                 value={editFormData.basic_salary}
-                onChange={(e) => setEditFormData({ ...editFormData, basic_salary: parseFloat(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setEditFormData({
+                    ...editFormData,
+                    basic_salary: Math.max(0, parseFloat(e.target.value) || 0),
+                  })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -543,9 +595,15 @@ export default function Payroll() {
               <Input
                 id="edit_deductions"
                 type="number"
+                min={0}
                 step="0.01"
                 value={editFormData.deductions}
-                onChange={(e) => setEditFormData({ ...editFormData, deductions: parseFloat(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setEditFormData({
+                    ...editFormData,
+                    deductions: Math.max(0, parseFloat(e.target.value) || 0),
+                  })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -553,9 +611,15 @@ export default function Payroll() {
               <Input
                 id="edit_bonus"
                 type="number"
+                min={0}
                 step="0.01"
                 value={editFormData.bonus}
-                onChange={(e) => setEditFormData({ ...editFormData, bonus: parseFloat(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setEditFormData({
+                    ...editFormData,
+                    bonus: Math.max(0, parseFloat(e.target.value) || 0),
+                  })
+                }
               />
             </div>
             <div className="p-3 bg-muted rounded-md">

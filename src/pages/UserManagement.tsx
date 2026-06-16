@@ -122,6 +122,14 @@ export default function UserManagement() {
       // Handle daily_rate: only send if it has a valid value
       if (formData.daily_rate && formData.daily_rate.trim() !== '') {
         const rate = parseFloat(formData.daily_rate)
+        if (!isNaN(rate) && rate < 0) {
+          toast({
+            title: 'Validation Error',
+            description: 'Daily rate cannot be negative',
+            variant: 'destructive',
+          })
+          return
+        }
         if (!isNaN(rate) && rate > 0) {
           registerData.daily_rate = rate
         }
@@ -159,6 +167,14 @@ export default function UserManagement() {
       // Handle daily_rate: only send if it has a valid value
       if (formData.daily_rate && formData.daily_rate.trim() !== '') {
         const rate = parseFloat(formData.daily_rate)
+        if (!isNaN(rate) && rate < 0) {
+          toast({
+            title: 'Validation Error',
+            description: 'Daily rate cannot be negative',
+            variant: 'destructive',
+          })
+          return
+        }
         if (!isNaN(rate) && rate > 0) {
           updateData.daily_rate = rate
         }
@@ -364,6 +380,7 @@ export default function UserManagement() {
                 <Input
                   id="daily_rate"
                   type="number"
+                  min={0}
                   step="0.01"
                   value={formData.daily_rate}
                   onChange={(e) => setFormData({ ...formData, daily_rate: e.target.value })}
@@ -570,6 +587,7 @@ export default function UserManagement() {
               <Input
                 id="edit_daily_rate"
                 type="number"
+                min={0}
                 step="0.01"
                 value={formData.daily_rate}
                 onChange={(e) => setFormData({ ...formData, daily_rate: e.target.value })}

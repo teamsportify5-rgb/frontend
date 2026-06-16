@@ -119,6 +119,14 @@ export default function Orders() {
       })
       return
     }
+    if (!formData.quantity || formData.quantity < 1) {
+      toast({
+        title: 'Validation Error',
+        description: 'Quantity must be at least 1',
+        variant: 'destructive',
+      })
+      return
+    }
     try {
       await ordersService.create(formData)
       toast({
@@ -139,6 +147,14 @@ export default function Orders() {
 
   const handleUpdate = async () => {
     if (!selectedOrder) return
+    if (formData.quantity != null && formData.quantity < 1) {
+      toast({
+        title: 'Validation Error',
+        description: 'Quantity must be at least 1',
+        variant: 'destructive',
+      })
+      return
+    }
     try {
       const updateData: UpdateOrder = {
         product: formData.product || undefined,
@@ -304,8 +320,14 @@ export default function Orders() {
                   <Input
                     id="quantity"
                     type="number"
+                    min={1}
                     value={formData.quantity}
-                    onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        quantity: Math.max(1, parseInt(e.target.value, 10) || 1),
+                      })
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -444,8 +466,14 @@ export default function Orders() {
               <Input
                 id="edit_quantity"
                 type="number"
+                min={1}
                 value={formData.quantity}
-                onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    quantity: Math.max(1, parseInt(e.target.value, 10) || 1),
+                  })
+                }
               />
             </div>
             <div className="space-y-2">

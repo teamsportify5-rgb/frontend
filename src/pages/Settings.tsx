@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -7,9 +7,25 @@ import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { Settings as SettingsIcon, Save, Database, Bell, Shield } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { settingsService } from '@/services/settings.service'
+
+function clampInt(value: string, fallback: number, min: number, max?: number) {
+  const n = parseInt(value, 10)
+  if (Number.isNaN(n)) return fallback
+  if (max != null) return Math.min(max, Math.max(min, n))
+  return Math.max(min, n)
+}
+
+function clampFloat(value: string, fallback: number, min: number, max?: number) {
+  const n = parseFloat(value)
+  if (Number.isNaN(n)) return fallback
+  if (max != null) return Math.min(max, Math.max(min, n))
+  return Math.max(min, n)
+}
 
 export default function Settings() {
   const { toast } = useToast()
+  const [saving, setSaving] = useState(false)
   const [settings, setSettings] = useState({
     // System Settings
     systemName: 'Sportify Management System',
@@ -19,7 +35,7 @@ export default function Settings() {
     
     // Payroll Settings
     defaultSalary: 50000,
-    taxRate: 15,
+    taxRate: 10,
     insuranceRate: 5,
     overtimeRate: 1.5,
     
@@ -35,12 +51,56 @@ export default function Settings() {
     requireTwoFactor: false,
   })
 
-  const handleSave = () => {
-    // Mock save functionality
-    toast({
-      title: 'Settings Saved',
-      description: 'System settings have been updated successfully',
-    })
+  useEffect(() => {
+    settingsService
+      .get()
+      .then((data) => setSettings((prev) => ({ ...prev, taxRate: data.tax_rate })))
+      .catch(() => {
+        toast({
+          title: 'Could not load tax rate',
+          description: 'Using default 10%. Save again after the backend is deployed.',
+          variant: 'destructive',
+        })
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleSave = async () => {
+    if (
+      settings.defaultSalary < 0 ||
+      settings.taxRate < 0 ||
+      settings.taxRate > 100 ||
+      settings.insuranceRate < 0 ||
+      settings.insuranceRate > 100 ||
+      settings.overtimeRate < 0 ||
+      settings.sessionTimeout < 1 ||
+      settings.passwordMinLength < 6
+    ) {
+      toast({
+        title: 'Validation Error',
+        description:
+          'Check numeric settings: amounts cannot be negative; tax and insurance rates must be 0–100%; session timeout at least 1 minute; password length at least 6.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setSaving(true)
+    try {
+      await settingsService.update({ tax_rate: settings.taxRate })
+      toast({
+        title: 'Settings Saved',
+        description: `Tax rate (${settings.taxRate}%) saved and will apply to new payroll runs. Other preferences are stored locally for now.`,
+      })
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.detail || 'Failed to save tax rate',
+        variant: 'destructive',
+      })
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -115,8 +175,14 @@ export default function Settings() {
               <Input
                 id="defaultSalary"
                 type="number"
+                min={0}
                 value={settings.defaultSalary}
-                onChange={(e) => setSettings({ ...settings, defaultSalary: parseInt(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    defaultSalary: clampInt(e.target.value, 0, 0),
+                  })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -124,17 +190,34 @@ export default function Settings() {
               <Input
                 id="taxRate"
                 type="number"
+                min={0}
+                max={100}
                 value={settings.taxRate}
-                onChange={(e) => setSettings({ ...settings, taxRate: parseInt(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    taxRate: clampInt(e.target.value, 0, 0, 100),
+                  })
+                }
               />
+              <p className="text-xs text-muted-foreground">
+                Applied automatically to payroll deductions when generating pay (basic salary × tax rate).
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="insuranceRate">Insurance Rate (%)</Label>
               <Input
                 id="insuranceRate"
                 type="number"
+                min={0}
+                max={100}
                 value={settings.insuranceRate}
-                onChange={(e) => setSettings({ ...settings, insuranceRate: parseInt(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    insuranceRate: clampInt(e.target.value, 0, 0, 100),
+                  })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -142,9 +225,15 @@ export default function Settings() {
               <Input
                 id="overtimeRate"
                 type="number"
+                min={0}
                 step="0.1"
                 value={settings.overtimeRate}
-                onChange={(e) => setSettings({ ...settings, overtimeRate: parseFloat(e.target.value) || 1.5 })}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    overtimeRate: clampFloat(e.target.value, 1.5, 0),
+                  })
+                }
               />
             </div>
           </div>
@@ -223,8 +312,14 @@ export default function Settings() {
               <Input
                 id="sessionTimeout"
                 type="number"
+                min={1}
                 value={settings.sessionTimeout}
-                onChange={(e) => setSettings({ ...settings, sessionTimeout: parseInt(e.target.value) || 30 })}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    sessionTimeout: clampInt(e.target.value, 30, 1),
+                  })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -232,8 +327,14 @@ export default function Settings() {
               <Input
                 id="passwordMinLength"
                 type="number"
+                min={6}
                 value={settings.passwordMinLength}
-                onChange={(e) => setSettings({ ...settings, passwordMinLength: parseInt(e.target.value) || 8 })}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    passwordMinLength: clampInt(e.target.value, 8, 6),
+                  })
+                }
               />
             </div>
           </div>
@@ -252,9 +353,9 @@ export default function Settings() {
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave} size="lg">
+        <Button onClick={handleSave} size="lg" disabled={saving}>
           <Save className="mr-2 h-4 w-4" />
-          Save All Settings
+          {saving ? 'Saving…' : 'Save All Settings'}
         </Button>
       </div>
     </div>

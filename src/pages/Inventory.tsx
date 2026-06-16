@@ -76,7 +76,20 @@ export default function Inventory() {
     }
   }
 
+  const validateInventoryForm = () => {
+    if (formData.quantity < 0 || formData.threshold < 0 || formData.unit_price < 0) {
+      toast({
+        title: 'Validation Error',
+        description: 'Quantity, threshold, and unit price cannot be negative',
+        variant: 'destructive',
+      })
+      return false
+    }
+    return true
+  }
+
   const handleAdd = async () => {
+    if (!validateInventoryForm()) return
     try {
       await inventoryService.create(formData)
       toast({
@@ -97,6 +110,7 @@ export default function Inventory() {
 
   const handleUpdate = async () => {
     if (!selectedItem) return
+    if (!validateInventoryForm()) return
     try {
       await inventoryService.update(selectedItem.id, formData)
       toast({
@@ -172,7 +186,10 @@ export default function Inventory() {
         step="0.01"
         value={formData.unit_price}
         onChange={(e) =>
-          setFormData({ ...formData, unit_price: parseFloat(e.target.value) || 0 })
+          setFormData({
+            ...formData,
+            unit_price: Math.max(0, parseFloat(e.target.value) || 0),
+          })
         }
         placeholder="e.g. 250 per kg or per piece"
       />
@@ -228,7 +245,10 @@ export default function Inventory() {
                       min={0}
                       value={formData.quantity}
                       onChange={(e) =>
-                        setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })
+                        setFormData({
+                          ...formData,
+                          quantity: Math.max(0, parseInt(e.target.value, 10) || 0),
+                        })
                       }
                     />
                   </div>
@@ -240,7 +260,10 @@ export default function Inventory() {
                       min={0}
                       value={formData.threshold}
                       onChange={(e) =>
-                        setFormData({ ...formData, threshold: parseInt(e.target.value) || 0 })
+                        setFormData({
+                          ...formData,
+                          threshold: Math.max(0, parseInt(e.target.value, 10) || 0),
+                        })
                       }
                     />
                   </div>
@@ -405,7 +428,10 @@ export default function Inventory() {
                   min={0}
                   value={formData.quantity}
                   onChange={(e) =>
-                    setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })
+                    setFormData({
+                      ...formData,
+                      quantity: Math.max(0, parseInt(e.target.value, 10) || 0),
+                    })
                   }
                 />
               </div>
@@ -417,7 +443,10 @@ export default function Inventory() {
                   min={0}
                   value={formData.threshold}
                   onChange={(e) =>
-                    setFormData({ ...formData, threshold: parseInt(e.target.value) || 0 })
+                    setFormData({
+                      ...formData,
+                      threshold: Math.max(0, parseInt(e.target.value, 10) || 0),
+                    })
                   }
                 />
               </div>
