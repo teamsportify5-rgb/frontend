@@ -32,6 +32,7 @@ import { authService, User } from '@/services/auth.service'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { Plus, Pencil, Trash2, Search, KeyRound } from 'lucide-react'
+import { formatApiError, isSportifyCompanyEmail, SPORTIFY_EMAIL_ERROR } from '@/lib/apiError'
 
 const ASSIGNABLE_ROLES = ['manager', 'accountant', 'worker', 'customer'] as const
 
@@ -76,7 +77,7 @@ export default function UserManagement() {
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.response?.data?.detail || 'Failed to fetch users',
+        description: formatApiError(error, 'Failed to fetch users'),
         variant: 'destructive',
       })
     } finally {
@@ -120,6 +121,14 @@ export default function UserManagement() {
       })
       return
     }
+    if (!isSportifyCompanyEmail(formData.email)) {
+      toast({
+        title: 'Validation Error',
+        description: SPORTIFY_EMAIL_ERROR,
+        variant: 'destructive',
+      })
+      return
+    }
 
     try {
       const registerData: any = {
@@ -155,7 +164,7 @@ export default function UserManagement() {
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.response?.data?.detail || 'Failed to create user',
+        description: formatApiError(error, 'Failed to create user'),
         variant: 'destructive',
       })
     }
@@ -202,7 +211,7 @@ export default function UserManagement() {
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.response?.data?.detail || 'Failed to update user',
+        description: formatApiError(error, 'Failed to update user'),
         variant: 'destructive',
       })
     }
@@ -238,7 +247,7 @@ export default function UserManagement() {
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.response?.data?.detail || 'Failed to delete user',
+        description: formatApiError(error, 'Failed to delete user'),
         variant: 'destructive',
       })
     }
@@ -281,7 +290,7 @@ export default function UserManagement() {
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.response?.data?.detail || 'Failed to reset password',
+        description: formatApiError(error, 'Failed to reset password'),
         variant: 'destructive',
       })
     } finally {
