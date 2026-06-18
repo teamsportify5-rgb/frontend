@@ -3,6 +3,9 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ThemeProvider } from './components/ThemeProvider'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { RoleProtectedRoute } from './components/RoleProtectedRoute'
+import { RoleDashboardRedirect } from './components/RoleDashboardRedirect'
+import { InvalidDashboardPath } from './components/InvalidDashboardPath'
+import { LayoutRoleRoute } from './components/LayoutRoleRoute'
 import { PublicRoute } from './components/PublicRoute'
 import Layout from './components/Layout'
 import Login from './pages/Login'
@@ -23,13 +26,11 @@ import Settings from './pages/Settings'
 import Analytics from './pages/Analytics'
 import AIImage from './pages/AIImage'
 import Notifications from './pages/Notifications'
+import { ROUTE_ACCESS } from './lib/routeAccess'
 import { Toaster } from './components/ui/toaster'
 
-// Component to route to appropriate dashboard based on role
-function DashboardRouter() {
-  const { user } = useAuth()
-  
-  switch (user?.role) {
+function DashboardPage({ role }: { role: 'admin' | 'manager' | 'accountant' | 'worker' | 'customer' }) {
+  switch (role) {
     case 'customer':
       return <CustomerDashboard />
     case 'manager':
@@ -44,11 +45,10 @@ function DashboardRouter() {
   }
 }
 
-// Component to route to appropriate orders page based on role
 function OrdersRouter() {
   const { user } = useAuth()
   const isCustomer = user?.role === 'customer'
-  
+
   return isCustomer ? <CustomerOrders /> : <Orders />
 }
 
@@ -70,9 +70,7 @@ function App() {
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <Layout>
-                  <DashboardRouter />
-                </Layout>
+                <RoleDashboardRedirect />
               </ProtectedRoute>
             }
           />
@@ -82,7 +80,7 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <RoleProtectedRoute allowedRoles={['admin']} roleLabel="Admin">
-                    <Dashboard />
+                    <DashboardPage role="admin" />
                   </RoleProtectedRoute>
                 </Layout>
               </ProtectedRoute>
@@ -94,7 +92,7 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <RoleProtectedRoute allowedRoles={['manager']} roleLabel="Manager">
-                    <ManagerDashboard />
+                    <DashboardPage role="manager" />
                   </RoleProtectedRoute>
                 </Layout>
               </ProtectedRoute>
@@ -106,7 +104,7 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <RoleProtectedRoute allowedRoles={['accountant']} roleLabel="Accountant">
-                    <AccountantDashboard />
+                    <DashboardPage role="accountant" />
                   </RoleProtectedRoute>
                 </Layout>
               </ProtectedRoute>
@@ -118,7 +116,7 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <RoleProtectedRoute allowedRoles={['worker']} roleLabel="Worker">
-                    <WorkerDashboard />
+                    <DashboardPage role="worker" />
                   </RoleProtectedRoute>
                 </Layout>
               </ProtectedRoute>
@@ -130,8 +128,18 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <RoleProtectedRoute allowedRoles={['customer']} roleLabel="Customer">
-                    <CustomerDashboard />
+                    <DashboardPage role="customer" />
                   </RoleProtectedRoute>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/*"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <InvalidDashboardPath />
                 </Layout>
               </ProtectedRoute>
             }
@@ -139,123 +147,89 @@ function App() {
           <Route
             path="/orders"
             element={
-              <ProtectedRoute>
-                <Layout>
-                  <OrdersRouter />
-                </Layout>
-              </ProtectedRoute>
+              <LayoutRoleRoute allowedRoles={ROUTE_ACCESS.orders}>
+                <OrdersRouter />
+              </LayoutRoleRoute>
             }
           />
           <Route
             path="/orders/:id"
             element={
-              <ProtectedRoute>
-                <Layout>
-                  <OrderDetails />
-                </Layout>
-              </ProtectedRoute>
+              <LayoutRoleRoute allowedRoles={ROUTE_ACCESS.orders}>
+                <OrderDetails />
+              </LayoutRoleRoute>
             }
           />
           <Route
             path="/attendance"
             element={
-              <ProtectedRoute>
-                <RoleProtectedRoute allowedRoles={['admin', 'manager', 'accountant', 'worker']}>
-                  <Layout>
-                    <Attendance />
-                  </Layout>
-                </RoleProtectedRoute>
-              </ProtectedRoute>
+              <LayoutRoleRoute allowedRoles={ROUTE_ACCESS.attendance}>
+                <Attendance />
+              </LayoutRoleRoute>
             }
           />
           <Route
             path="/payroll"
             element={
-              <ProtectedRoute>
-                <RoleProtectedRoute allowedRoles={['admin', 'manager', 'accountant', 'worker']}>
-                  <Layout>
-                    <Payroll />
-                  </Layout>
-                </RoleProtectedRoute>
-              </ProtectedRoute>
+              <LayoutRoleRoute allowedRoles={ROUTE_ACCESS.payroll}>
+                <Payroll />
+              </LayoutRoleRoute>
             }
           />
           <Route
             path="/profile"
             element={
-              <ProtectedRoute>
-                <Layout>
-                  <Profile />
-                </Layout>
-              </ProtectedRoute>
+              <LayoutRoleRoute allowedRoles={ROUTE_ACCESS.profile}>
+                <Profile />
+              </LayoutRoleRoute>
             }
           />
           <Route
             path="/users"
             element={
-              <ProtectedRoute>
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <Layout>
-                    <UserManagement />
-                  </Layout>
-                </RoleProtectedRoute>
-              </ProtectedRoute>
+              <LayoutRoleRoute allowedRoles={ROUTE_ACCESS.users} roleLabel="Admin">
+                <UserManagement />
+              </LayoutRoleRoute>
             }
           />
           <Route
             path="/inventory"
             element={
-              <ProtectedRoute>
-                <RoleProtectedRoute allowedRoles={['admin', 'manager']}>
-                  <Layout>
-                    <Inventory />
-                  </Layout>
-                </RoleProtectedRoute>
-              </ProtectedRoute>
+              <LayoutRoleRoute allowedRoles={ROUTE_ACCESS.inventory}>
+                <Inventory />
+              </LayoutRoleRoute>
             }
           />
           <Route
             path="/analytics"
             element={
-              <ProtectedRoute>
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <Layout>
-                    <Analytics />
-                  </Layout>
-                </RoleProtectedRoute>
-              </ProtectedRoute>
+              <LayoutRoleRoute allowedRoles={ROUTE_ACCESS.analytics} roleLabel="Admin">
+                <Analytics />
+              </LayoutRoleRoute>
             }
           />
           <Route
             path="/settings"
             element={
-              <ProtectedRoute>
-                <RoleProtectedRoute allowedRoles={['admin']}>
-                  <Layout>
-                    <Settings />
-                  </Layout>
-                </RoleProtectedRoute>
-              </ProtectedRoute>
+              <LayoutRoleRoute allowedRoles={ROUTE_ACCESS.settings} roleLabel="Admin">
+                <Settings />
+              </LayoutRoleRoute>
             }
           />
           <Route
             path="/ai-image"
             element={
-              <ProtectedRoute>
-                <Layout>
-                  <AIImage />
-                </Layout>
-              </ProtectedRoute>
+              <LayoutRoleRoute allowedRoles={ROUTE_ACCESS.aiImage}>
+                <AIImage />
+              </LayoutRoleRoute>
             }
           />
           <Route
             path="/notifications"
             element={
-              <ProtectedRoute>
-                <Layout>
-                  <Notifications />
-                </Layout>
-              </ProtectedRoute>
+              <LayoutRoleRoute allowedRoles={ROUTE_ACCESS.notifications}>
+                <Notifications />
+              </LayoutRoleRoute>
             }
           />
           <Route path="/" element={<Navigate to="/login" replace />} />
@@ -268,4 +242,3 @@ function App() {
 }
 
 export default App
-

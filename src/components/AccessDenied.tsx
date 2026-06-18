@@ -2,15 +2,18 @@ import { useNavigate } from 'react-router-dom'
 import { ShieldAlert } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
+import { getDashboardPathForRole } from '@/lib/dashboardRoutes'
 
 type AccessDeniedProps = {
   requiredRole?: string
   title?: string
+  message?: string
 }
 
 export function AccessDenied({
   requiredRole,
   title = 'Access Denied',
+  message,
 }: AccessDeniedProps) {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -22,17 +25,24 @@ export function AccessDenied({
       </div>
       <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
       <p className="text-gray-600 mt-3 max-w-md">
-        You are logged in as <span className="font-semibold capitalize">{user?.role}</span>.
-        {requiredRole ? (
+        {message ?? (
           <>
-            {' '}
-            This page is only available to <span className="font-semibold">{requiredRole}</span> accounts.
+            You are logged in as <span className="font-semibold capitalize">{user?.role}</span>.
+            {requiredRole ? (
+              <>
+                {' '}
+                This page is only available to <span className="font-semibold">{requiredRole}</span> accounts.
+              </>
+            ) : (
+              ' You do not have permission to view this page.'
+            )}
           </>
-        ) : (
-          ' You do not have permission to view this page.'
         )}
       </p>
-      <Button className="mt-6" onClick={() => navigate('/dashboard')}>
+      <Button
+        className="mt-6"
+        onClick={() => navigate(getDashboardPathForRole(user?.role))}
+      >
         Go to your dashboard
       </Button>
     </div>

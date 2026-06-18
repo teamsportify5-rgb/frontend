@@ -31,7 +31,7 @@ export function RoleProtectedRoute({ children, allowedRoles, roleLabel }: RolePr
       roleLabel ||
       (allowedRoles.length === 1
         ? allowedRoles[0].charAt(0).toUpperCase() + allowedRoles[0].slice(1)
-        : allowedRoles.join(', '))
+        : allowedRoles.map((r) => r.charAt(0).toUpperCase() + r.slice(1)).join(', '))
     return <AccessDenied requiredRole={label} />
   }
 
