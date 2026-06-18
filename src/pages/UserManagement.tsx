@@ -33,6 +33,8 @@ import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { Plus, Pencil, Trash2, Search, KeyRound } from 'lucide-react'
 
+const ASSIGNABLE_ROLES = ['manager', 'accountant', 'worker', 'customer'] as const
+
 export default function UserManagement() {
   const [users, setUsers] = useState<User[]>([])
   const [filteredUsers, setFilteredUsers] = useState<User[]>([])
@@ -110,6 +112,14 @@ export default function UserManagement() {
       })
       return
     }
+    if (formData.role === 'admin') {
+      toast({
+        title: 'Validation Error',
+        description: 'Admin accounts cannot be created from User Management',
+        variant: 'destructive',
+      })
+      return
+    }
 
     try {
       const registerData: any = {
@@ -158,8 +168,10 @@ export default function UserManagement() {
       const updateData: any = {
         name: formData.name,
         email: formData.email,
-        role: formData.role,
         phone: formData.phone,
+      }
+      if (selectedUser.role !== 'admin') {
+        updateData.role = formData.role
       }
       if (formData.password) {
         updateData.password = formData.password
@@ -196,7 +208,15 @@ export default function UserManagement() {
     }
   }
 
-  const handleDelete = async (userId: number) => {
+  const handleDelete = async (userId: number, userRole: string) => {
+    if (userRole === 'admin') {
+      toast({
+        title: 'Error',
+        description: 'Admin accounts cannot be deleted',
+        variant: 'destructive',
+      })
+      return
+    }
     if (userId === currentUser?.id) {
       toast({
         title: 'Error',
@@ -357,11 +377,11 @@ export default function UserManagement() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="accountant">Accountant</SelectItem>
-                    <SelectItem value="worker">Worker</SelectItem>
-                    <SelectItem value="customer">Customer</SelectItem>
+                    {ASSIGNABLE_ROLES.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {role.charAt(0).toUpperCase() + role.slice(1)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -494,11 +514,11 @@ export default function UserManagement() {
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          {user.id !== currentUser?.id && (
+                          {user.id !== currentUser?.id && user.role !== 'admin' && (
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => handleDelete(user.id)}
+                              onClick={() => handleDelete(user.id, user.role)}
                             >
                               <Trash2 className="h-4 w-4 text-red-600" />
                             </Button>
@@ -557,21 +577,25 @@ export default function UserManagement() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit_role">Role *</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value: any) => setFormData({ ...formData, role: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
-                  <SelectItem value="accountant">Accountant</SelectItem>
-                  <SelectItem value="worker">Worker</SelectItem>
-                  <SelectItem value="customer">Customer</SelectItem>
-                </SelectContent>
-              </Select>
+              {selectedUser?.role === 'admin' ? (
+                <Input id="edit_role" value="Admin" disabled />
+              ) : (
+                <Select
+                  value={formData.role}
+                  onValueChange={(value: any) => setFormData({ ...formData, role: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ASSIGNABLE_ROLES.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {role.charAt(0).toUpperCase() + role.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit_phone">Phone</Label>
