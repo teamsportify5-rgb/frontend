@@ -196,8 +196,11 @@ export default function Payroll() {
   const handleUpdate = async () => {
     if (!selectedPayroll) return
 
-    const { days_present, basic_salary, deductions, bonus } = editFormData
-    if (days_present < 0 || basic_salary < 0 || deductions < 0 || bonus < 0) {
+    const daysPresent = editFormData.days_present ?? 0
+    const basicSalary = editFormData.basic_salary ?? 0
+    const deductionsAmount = editFormData.deductions ?? 0
+    const bonusAmount = editFormData.bonus ?? 0
+    if (daysPresent < 0 || basicSalary < 0 || deductionsAmount < 0 || bonusAmount < 0) {
       toast({
         title: 'Validation Error',
         description: 'Payroll amounts cannot be negative',
