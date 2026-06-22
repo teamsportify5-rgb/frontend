@@ -54,6 +54,18 @@ export interface PasswordResetRequestAck {
   message: string
 }
 
+export interface ChangeEmailRequest {
+  new_email: string
+  password: string
+}
+
+export interface ChangeEmailResponse {
+  message: string
+  access_token: string
+  token_type: string
+  user: User
+}
+
 export interface ChangePasswordRequest {
   current_password: string
   new_password: string
@@ -82,6 +94,11 @@ export const authService = {
 
   changePassword: async (data: ChangePasswordRequest): Promise<User> => {
     const response = await api.post<User>('/auth/change-password', data)
+    return response.data
+  },
+
+  changeEmail: async (data: ChangeEmailRequest): Promise<ChangeEmailResponse> => {
+    const response = await api.post<ChangeEmailResponse>('/auth/change-email', data)
     return response.data
   },
 

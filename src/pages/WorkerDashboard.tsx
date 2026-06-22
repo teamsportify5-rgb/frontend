@@ -23,7 +23,19 @@ import {
   Calendar,
   Download
 } from 'lucide-react'
+import { tasksService, Task, TaskStatus } from '@/services/tasks.service'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
+import { formatApiError } from '@/lib/apiError'
+
+const TASK_STATUS_OPTIONS: TaskStatus[] = ['pending', 'in_progress', 'completed']
 
 export default function WorkerDashboard() {
   const { user } = useAuth()
@@ -34,6 +46,7 @@ export default function WorkerDashboard() {
   const [loading, setLoading] = useState(true)
   const [checkingIn, setCheckingIn] = useState(false)
   const [checkingOut, setCheckingOut] = useState(false)
+  const [assignedTasks, setAssignedTasks] = useState<Task[]>([])
 
   useEffect(() => {
     if (user) {
@@ -45,14 +58,16 @@ export default function WorkerDashboard() {
     if (!user) return
     
     try {
-      const [attendanceData, payrollData, todayData] = await Promise.all([
+      const [attendanceData, payrollData, todayData, tasksData] = await Promise.all([
         attendanceService.getByEmployee(user.id),
         payrollService.getByEmployee(user.id),
         attendanceService.getToday(),
+        tasksService.getAll(),
       ])
       
       setAttendance(attendanceData)
       setPayrollRecords(payrollData)
+      setAssignedTasks(tasksData)
       
       // Find today's attendance for current user
       const today = todayData.find(a => a.employee_id === user.id)
@@ -137,12 +152,19 @@ export default function WorkerDashboard() {
     }
   }
 
-  // Mock assigned tasks (would come from tasks API)
-  const assignedTasks = [
-    { id: 1, task: 'Quality check on Order #1234', status: 'in_progress', dueDate: '2024-01-15' },
-    { id: 2, task: 'Machine maintenance - Line 2', status: 'pending', dueDate: '2024-01-16' },
-    { id: 3, task: 'Inventory count - Warehouse A', status: 'completed', dueDate: '2024-01-14' },
-  ]
+  const updateTaskStatus = async (taskId: number, status: TaskStatus) => {
+    try {
+      await tasksService.update(taskId, { status })
+      toast({ title: 'Success', description: 'Task status updated' })
+      fetchData()
+    } catch (error: unknown) {
+      toast({
+        title: 'Error',
+        description: formatApiError(error, 'Failed to update task'),
+        variant: 'destructive',
+      })
+    }
+  }
 
   const canCheckIn = !todayAttendance || !todayAttendance.check_in
   const canCheckOut = todayAttendance?.check_in && !todayAttendance?.check_out
@@ -217,9 +239,14 @@ export default function WorkerDashboard() {
 
       {/* Assigned Tasks */}
       <Card>
-        <CardHeader>
-          <CardTitle>My Assigned Tasks</CardTitle>
-          <CardDescription>Tasks assigned to you</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>My Assigned Tasks</CardTitle>
+            <CardDescription>Tasks assigned to you</CardDescription>
+          </div>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/tasks">View all</Link>
+          </Button>
         </CardHeader>
         <CardContent>
           {assignedTasks.length > 0 ? (
@@ -232,19 +259,30 @@ export default function WorkerDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {assignedTasks.map((task) => (
+                {assignedTasks.slice(0, 5).map((task) => (
                   <TableRow key={task.id}>
-                    <TableCell className="font-medium">{task.task}</TableCell>
+                    <TableCell className="font-medium">{task.title}</TableCell>
                     <TableCell>
-                      {format(new Date(task.dueDate), 'MMM dd, yyyy')}
+                      {task.due_date
+                        ? format(new Date(task.due_date), 'MMM dd, yyyy')
+                        : '—'}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={
-                        task.status === 'completed' ? 'default' :
-                        task.status === 'in_progress' ? 'secondary' : 'outline'
-                      }>
-                        {task.status.replace('_', ' ')}
-                      </Badge>
+                      <Select
+                        value={task.status}
+                        onValueChange={(value) => updateTaskStatus(task.id, value as TaskStatus)}
+                      >
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TASK_STATUS_OPTIONS.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {s.replace('_', ' ')}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                   </TableRow>
                 ))}

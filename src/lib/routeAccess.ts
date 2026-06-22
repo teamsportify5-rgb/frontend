@@ -29,6 +29,7 @@ export function formatAllowedRolesLabel(roles: readonly string[]): string {
 /** Roles allowed per app route (must match Layout.tsx nav). */
 export const ROUTE_ACCESS = {
   orders: [ROLES.ADMIN, ROLES.MANAGER, ROLES.CUSTOMER],
+  tasks: [ROLES.ADMIN, ROLES.MANAGER, ROLES.WORKER, ROLES.ACCOUNTANT],
   attendance: [ROLES.ADMIN, ROLES.MANAGER, ROLES.ACCOUNTANT, ROLES.WORKER],
   payroll: [ROLES.ADMIN, ROLES.MANAGER, ROLES.ACCOUNTANT],
   inventory: [ROLES.ADMIN, ROLES.MANAGER],

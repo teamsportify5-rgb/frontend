@@ -17,6 +17,7 @@ import {
   BarChart3,
   Wand2,
   Bell,
+  ClipboardList,
   Moon,
   Sun,
   Monitor
@@ -39,6 +40,7 @@ const adminNavigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Users', href: '/users', icon: Users },
   { name: 'Orders', href: '/orders', icon: Package },
+  { name: 'Tasks', href: '/tasks', icon: ClipboardList },
   { name: 'Attendance', href: '/attendance', icon: Clock },
   { name: 'Payroll', href: '/payroll', icon: DollarSign },
   { name: 'Inventory', href: '/inventory', icon: Warehouse },
@@ -46,27 +48,34 @@ const adminNavigation = [
   { name: 'Notifications', href: '/notifications', icon: Bell },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Profile', href: '/profile', icon: User },
 ]
 
 const managerNavigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Attendance', href: '/attendance', icon: Clock },
   { name: 'Orders', href: '/orders', icon: Package },
+  { name: 'Tasks', href: '/tasks', icon: ClipboardList },
   { name: 'AI Image', href: '/ai-image', icon: Wand2 },
   { name: 'Notifications', href: '/notifications', icon: Bell },
+  { name: 'Profile', href: '/profile', icon: User },
 ]
 
 const accountantNavigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Attendance', href: '/attendance', icon: Clock },
   { name: 'Payroll', href: '/payroll', icon: DollarSign },
+  { name: 'Tasks', href: '/tasks', icon: ClipboardList },
   { name: 'Notifications', href: '/notifications', icon: Bell },
+  { name: 'Profile', href: '/profile', icon: User },
 ]
 
 const workerNavigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Attendance', href: '/attendance', icon: Clock },
+  { name: 'Tasks', href: '/tasks', icon: ClipboardList },
   { name: 'Notifications', href: '/notifications', icon: Bell },
+  { name: 'Profile', href: '/profile', icon: User },
 ]
 
 const customerNavigation = [

@@ -26,6 +26,7 @@ import Settings from './pages/Settings'
 import Analytics from './pages/Analytics'
 import AIImage from './pages/AIImage'
 import Notifications from './pages/Notifications'
+import Tasks from './pages/Tasks'
 import { ROUTE_ACCESS } from './lib/routeAccess'
 import { Toaster } from './components/ui/toaster'
 
@@ -173,6 +174,14 @@ function App() {
             element={
               <LayoutRoleRoute allowedRoles={ROUTE_ACCESS.payroll}>
                 <Payroll />
+              </LayoutRoleRoute>
+            }
+          />
+          <Route
+            path="/tasks"
+            element={
+              <LayoutRoleRoute allowedRoles={ROUTE_ACCESS.tasks}>
+                <Tasks />
               </LayoutRoleRoute>
             }
           />

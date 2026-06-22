@@ -10,7 +10,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Link } from 'react-router-dom'
 import { attendanceService, Attendance } from '@/services/attendance.service'
+import { tasksService, Task } from '@/services/tasks.service'
 import { ordersService, Order } from '@/services/orders.service'
 import { authService, User } from '@/services/auth.service'
 import {
@@ -38,19 +40,22 @@ export default function ManagerDashboard() {
   const [attendance, setAttendance] = useState<Attendance[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [workers, setWorkers] = useState<User[]>([])
+  const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [attendanceData, ordersData, workersData] = await Promise.all([
+        const [attendanceData, ordersData, workersData, tasksData] = await Promise.all([
           attendanceService.getToday(),
           ordersService.getAll(),
           authService.getUsers('worker'),
+          tasksService.getAll(),
         ])
         setAttendance(attendanceData)
         setOrders(ordersData)
         setWorkers(workersData)
+        setTasks(tasksData)
       } catch (error) {
         console.error('Error fetching data:', error)
       } finally {
@@ -78,14 +83,6 @@ export default function ManagerDashboard() {
     { item: 'Steel Sheets', current: 50, threshold: 100, status: 'low' },
     { item: 'Bolts', current: 200, threshold: 500, status: 'low' },
     { item: 'Paint', current: 15, threshold: 20, status: 'critical' },
-  ]
-
-  // Mock Daily Tasks/Activities
-  const dailyTasks = [
-    { id: 1, task: 'Quality check on Order #1234', assignedTo: 'John Doe', status: 'in_progress', priority: 'high' },
-    { id: 2, task: 'Machine maintenance - Line 2', assignedTo: 'Jane Smith', status: 'pending', priority: 'medium' },
-    { id: 3, task: 'Inventory count - Warehouse A', assignedTo: 'Mike Johnson', status: 'completed', priority: 'low' },
-    { id: 4, task: 'Safety inspection', assignedTo: 'Sarah Williams', status: 'pending', priority: 'high' },
   ]
 
   // Worker Performance Data (mock - would come from performance API)
@@ -283,47 +280,61 @@ export default function ManagerDashboard() {
         </CardContent>
       </Card>
 
-      {/* Daily Tasks/Activities */}
+      {/* Tasks & Activities */}
       <Card>
-        <CardHeader>
-          <CardTitle>Daily Tasks & Activities</CardTitle>
-          <CardDescription>Today's assigned tasks and their status</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Tasks & Activities</CardTitle>
+            <CardDescription>Assigned tasks and their status</CardDescription>
+          </div>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/tasks">Manage Tasks</Link>
+          </Button>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Task</TableHead>
-                <TableHead>Assigned To</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {dailyTasks.map((task) => (
-                <TableRow key={task.id}>
-                  <TableCell className="font-medium">{task.task}</TableCell>
-                  <TableCell>{task.assignedTo}</TableCell>
-                  <TableCell>
-                    <Badge variant={
-                      task.priority === 'high' ? 'destructive' :
-                      task.priority === 'medium' ? 'secondary' : 'outline'
-                    }>
-                      {task.priority}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={
-                      task.status === 'completed' ? 'default' :
-                      task.status === 'in_progress' ? 'secondary' : 'outline'
-                    }>
-                      {task.status.replace('_', ' ')}
-                    </Badge>
-                  </TableCell>
+          {tasks.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              No tasks yet.{' '}
+              <Link to="/tasks" className="text-primary underline">
+                Assign a task
+              </Link>
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Task</TableHead>
+                  <TableHead>Assigned To</TableHead>
+                  <TableHead>Priority</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {tasks.slice(0, 8).map((task) => (
+                  <TableRow key={task.id}>
+                    <TableCell className="font-medium">{task.title}</TableCell>
+                    <TableCell>{task.assigned_to_name || `#${task.assigned_to_id}`}</TableCell>
+                    <TableCell>
+                      <Badge variant={
+                        task.priority === 'high' ? 'destructive' :
+                        task.priority === 'medium' ? 'secondary' : 'outline'
+                      }>
+                        {task.priority}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={
+                        task.status === 'completed' ? 'default' :
+                        task.status === 'in_progress' ? 'secondary' : 'outline'
+                      }>
+                        {task.status.replace('_', ' ')}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
