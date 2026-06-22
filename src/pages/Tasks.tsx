@@ -43,47 +43,38 @@ import { format } from 'date-fns'
 const STATUS_OPTIONS: TaskStatus[] = ['pending', 'in_progress', 'completed']
 const PRIORITY_OPTIONS: TaskPriority[] = ['low', 'medium', 'high']
 
-/** Roles that can receive an assigned task (matches backend). */
-const ASSIGNEE_ROLE_GROUPS = [
-  { key: 'worker' as const, label: 'Worker' },
-  { key: 'manager' as const, label: 'Manager' },
-  { key: 'accountant' as const, label: 'Accountant' },
-]
-
-type AssigneesByRole = Record<(typeof ASSIGNEE_ROLE_GROUPS)[number]['key'], User[]>
-
-const EMPTY_ASSIGNEES: AssigneesByRole = { worker: [], manager: [], accountant: [] }
+const ELIGIBLE_ASSIGNEE_ROLES = ['worker', 'manager', 'accountant'] as const
 
 function formatRoleLabel(role: string) {
   return role.charAt(0).toUpperCase() + role.slice(1)
 }
 
+function isEligibleAssignee(user: User) {
+  return ELIGIBLE_ASSIGNEE_ROLES.includes(user.role as (typeof ELIGIBLE_ASSIGNEE_ROLES)[number])
+}
+
 function AssigneePicker({
   value,
   onChange,
-  assigneesByRole,
+  eligibleUsers,
 }: {
   value: number
   onChange: (userId: number) => void
-  assigneesByRole: AssigneesByRole
+  eligibleUsers: User[]
 }) {
   const [roleFilter, setRoleFilter] = useState<'all' | 'worker' | 'manager' | 'accountant'>('all')
 
-  const allEligible = ASSIGNEE_ROLE_GROUPS.flatMap((group) =>
-    assigneesByRole[group.key].map((u) => ({ user: u, role: group.key, roleLabel: group.label }))
-  ).sort((a, b) => a.user.name.localeCompare(b.user.name))
-
   const filtered =
     roleFilter === 'all'
-      ? allEligible
-      : allEligible.filter((entry) => entry.role === roleFilter)
+      ? eligibleUsers
+      : eligibleUsers.filter((u) => u.role === roleFilter)
 
-  const selected = allEligible.find((entry) => entry.user.id === value)
+  const selected = eligibleUsers.find((u) => u.id === value)
 
   return (
     <div className="space-y-3">
       <div className="space-y-2">
-        <Label htmlFor="assignee-role-filter">Narrow list by role (optional)</Label>
+        <Label htmlFor="assignee-role-filter">Filter users by role (optional)</Label>
         <Select
           value={roleFilter}
           onValueChange={(v) => setRoleFilter(v as typeof roleFilter)}
@@ -92,27 +83,45 @@ function AssigneePicker({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All roles</SelectItem>
-            <SelectItem value="worker">Workers only</SelectItem>
-            <SelectItem value="manager">Managers only</SelectItem>
-            <SelectItem value="accountant">Accountants only</SelectItem>
+            <SelectItem value="all">All — workers, managers & accountants</SelectItem>
+            <SelectItem value="worker">Role: Worker</SelectItem>
+            <SelectItem value="manager">Role: Manager</SelectItem>
+            <SelectItem value="accountant">Role: Accountant</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="assignee-person">Select one person *</Label>
+        <Label htmlFor="assignee-person">Select user *</Label>
         <Select
           value={value > 0 ? value.toString() : undefined}
           onValueChange={(v) => onChange(parseInt(v, 10))}
         >
           <SelectTrigger id="assignee-person">
-            <SelectValue placeholder="Choose a specific worker, manager, or accountant" />
+            <SelectValue placeholder="Pick a user from User Management">
+              {selected ? (
+                <span>
+                  {selected.name}{' '}
+                  <span className="text-muted-foreground">
+                    ({formatRoleLabel(selected.role)})
+                  </span>
+                </span>
+              ) : null}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            {filtered.map(({ user, roleLabel }) => (
-              <SelectItem key={user.id} value={user.id.toString()}>
-                {user.name} · {roleLabel}
+            {filtered.map((user) => (
+              <SelectItem
+                key={user.id}
+                value={user.id.toString()}
+                textValue={`${user.name} ${user.email} ${user.role}`}
+              >
+                <div className="flex flex-col items-start py-0.5">
+                  <span className="font-medium leading-tight">{user.name}</span>
+                  <span className="text-xs text-muted-foreground leading-tight">
+                    {user.email} · Role: {formatRoleLabel(user.role)}
+                  </span>
+                </div>
               </SelectItem>
             ))}
           </SelectContent>
@@ -120,21 +129,24 @@ function AssigneePicker({
       </div>
 
       {selected && (
-        <p className="text-xs rounded-md border bg-muted/50 px-3 py-2">
-          This task will be assigned to{' '}
-          <strong>{selected.user.name}</strong> ({selected.roleLabel}){' '}
-          <strong>only</strong> — not shared with other workers or roles.
-        </p>
+        <div className="text-xs rounded-md border bg-muted/50 px-3 py-2 space-y-1">
+          <p>
+            Assigned to user: <strong>{selected.name}</strong>
+          </p>
+          <p className="text-muted-foreground">
+            Email: {selected.email} · Role: {formatRoleLabel(selected.role)}
+          </p>
+        </div>
       )}
 
       <p className="text-xs text-muted-foreground">
-        Each task is for <strong>one specific person</strong>. Pick an individual worker,
-        manager, or accountant by name.
+        Users come from <strong>User Management</strong>. Each task goes to one user — their
+        name and role are shown separately.
       </p>
 
-      {allEligible.length === 0 && (
+      {eligibleUsers.length === 0 && (
         <p className="text-xs text-destructive">
-          No eligible users found. Add workers, managers, or accountants in User Management.
+          No users with worker, manager, or accountant role found. Create them under Users.
         </p>
       )}
     </div>
@@ -149,7 +161,7 @@ function priorityBadgeVariant(priority: TaskPriority) {
 
 export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>([])
-  const [assigneesByRole, setAssigneesByRole] = useState<AssigneesByRole>(EMPTY_ASSIGNEES)
+  const [eligibleUsers, setEligibleUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -191,16 +203,12 @@ export default function Tasks() {
 
   const fetchAssignees = async () => {
     try {
-      const [workers, managers, accountants] = await Promise.all([
-        authService.getUsers('worker'),
-        authService.getUsers('manager'),
-        authService.getUsers('accountant'),
-      ])
-      setAssigneesByRole({
-        worker: workers.sort((a, b) => a.name.localeCompare(b.name)),
-        manager: managers.sort((a, b) => a.name.localeCompare(b.name)),
-        accountant: accountants.sort((a, b) => a.name.localeCompare(b.name)),
-      })
+      const all = await authService.getUsers()
+      setEligibleUsers(
+        all
+          .filter(isEligibleAssignee)
+          .sort((a, b) => a.name.localeCompare(b.name))
+      )
     } catch (error: unknown) {
       toast({
         title: 'Error',
@@ -366,11 +374,11 @@ export default function Tasks() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Assign to one person *</Label>
+                    <Label>Assign to user *</Label>
                     <AssigneePicker
                       value={formData.assigned_to_id}
                       onChange={(assigned_to_id) => setFormData({ ...formData, assigned_to_id })}
-                      assigneesByRole={assigneesByRole}
+                      eligibleUsers={eligibleUsers}
                     />
                   </div>
                   <div className="space-y-2">
@@ -433,7 +441,7 @@ export default function Tasks() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Task</TableHead>
-                    {canManage && <TableHead>Assigned person</TableHead>}
+                    {canManage && <TableHead>User</TableHead>}
                     {canManage && <TableHead>Role</TableHead>}
                     <TableHead>Priority</TableHead>
                     <TableHead>Due Date</TableHead>
@@ -453,7 +461,11 @@ export default function Tasks() {
                         )}
                       </TableCell>
                       {canManage && (
-                        <TableCell>{task.assigned_to_name || `#${task.assigned_to_id}`}</TableCell>
+                        <TableCell>
+                          <span className="font-medium">
+                            {task.assigned_to_name || `User #${task.assigned_to_id}`}
+                          </span>
+                        </TableCell>
                       )}
                       {canManage && (
                         <TableCell>
@@ -537,11 +549,11 @@ export default function Tasks() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Assign to one person</Label>
+                <Label>Assign to user</Label>
                 <AssigneePicker
                   value={formData.assigned_to_id}
                   onChange={(assigned_to_id) => setFormData({ ...formData, assigned_to_id })}
-                  assigneesByRole={assigneesByRole}
+                  eligibleUsers={eligibleUsers}
                 />
               </div>
               <div className="space-y-2">
