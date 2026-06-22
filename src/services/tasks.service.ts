@@ -60,4 +60,11 @@ export const tasksService = {
   delete: async (id: number): Promise<void> => {
     await api.delete(`/tasks/${id}`)
   },
+
+  getAssignees: async (): Promise<
+    { id: number; name: string; email: string; role: string; phone?: string; created_at: string }[]
+  > => {
+    const response = await api.get('/tasks/assignees')
+    return response.data
+  },
 }

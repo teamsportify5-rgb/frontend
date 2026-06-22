@@ -39,6 +39,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { formatApiError } from '@/lib/apiError'
 import { format } from 'date-fns'
+import { cn } from '@/lib/utils'
+import { Search } from 'lucide-react'
 
 const STATUS_OPTIONS: TaskStatus[] = ['pending', 'in_progress', 'completed']
 const PRIORITY_OPTIONS: TaskPriority[] = ['low', 'medium', 'high']
@@ -53,28 +55,50 @@ function isEligibleAssignee(user: User) {
   return ELIGIBLE_ASSIGNEE_ROLES.includes(user.role as (typeof ELIGIBLE_ASSIGNEE_ROLES)[number])
 }
 
+type AssigneeUser = Pick<User, 'id' | 'name' | 'email' | 'role'>
+
 function AssigneePicker({
   value,
   onChange,
   eligibleUsers,
+  loadingUsers,
 }: {
   value: number
   onChange: (userId: number) => void
-  eligibleUsers: User[]
+  eligibleUsers: AssigneeUser[]
+  loadingUsers: boolean
 }) {
   const [roleFilter, setRoleFilter] = useState<'all' | 'worker' | 'manager' | 'accountant'>('all')
+  const [search, setSearch] = useState('')
 
-  const filtered =
+  const byRole =
     roleFilter === 'all'
       ? eligibleUsers
       : eligibleUsers.filter((u) => u.role === roleFilter)
+
+  const searchLower = search.trim().toLowerCase()
+  const filtered = searchLower
+    ? byRole.filter(
+        (u) =>
+          u.name.toLowerCase().includes(searchLower) ||
+          u.email.toLowerCase().includes(searchLower)
+      )
+    : byRole
 
   const selected = eligibleUsers.find((u) => u.id === value)
 
   return (
     <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+        <span>
+          {loadingUsers
+            ? 'Loading users from User Management…'
+            : `${eligibleUsers.length} user(s) can be assigned (worker, manager, or accountant role)`}
+        </span>
+      </div>
+
       <div className="space-y-2">
-        <Label htmlFor="assignee-role-filter">Filter users by role (optional)</Label>
+        <Label htmlFor="assignee-role-filter">Filter by role</Label>
         <Select
           value={roleFilter}
           onValueChange={(v) => setRoleFilter(v as typeof roleFilter)}
@@ -82,72 +106,70 @@ function AssigneePicker({
           <SelectTrigger id="assignee-role-filter">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All — workers, managers & accountants</SelectItem>
-            <SelectItem value="worker">Role: Worker</SelectItem>
-            <SelectItem value="manager">Role: Manager</SelectItem>
-            <SelectItem value="accountant">Role: Accountant</SelectItem>
+          <SelectContent className="z-[200]">
+            <SelectItem value="all">All roles</SelectItem>
+            <SelectItem value="worker">Worker</SelectItem>
+            <SelectItem value="manager">Manager</SelectItem>
+            <SelectItem value="accountant">Accountant</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="assignee-person">Select user *</Label>
-        <Select
-          value={value > 0 ? value.toString() : undefined}
-          onValueChange={(v) => onChange(parseInt(v, 10))}
-        >
-          <SelectTrigger id="assignee-person">
-            <SelectValue placeholder="Pick a user from User Management">
-              {selected ? (
-                <span>
-                  {selected.name}{' '}
-                  <span className="text-muted-foreground">
-                    ({formatRoleLabel(selected.role)})
-                  </span>
-                </span>
-              ) : null}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {filtered.map((user) => (
-              <SelectItem
+        <Label htmlFor="assignee-search">Search by name or email</Label>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id="assignee-search"
+            className="pl-9"
+            placeholder="e.g. manager@sportify.com"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Select user *</Label>
+        <div className="rounded-md border max-h-52 overflow-y-auto">
+          {loadingUsers ? (
+            <p className="p-4 text-sm text-muted-foreground text-center">Loading users…</p>
+          ) : filtered.length === 0 ? (
+            <p className="p-4 text-sm text-muted-foreground text-center">
+              {eligibleUsers.length === 0
+                ? 'No worker, manager, or accountant users found. Add them under Users.'
+                : 'No users match this filter.'}
+            </p>
+          ) : (
+            filtered.map((user) => (
+              <button
                 key={user.id}
-                value={user.id.toString()}
-                textValue={`${user.name} ${user.email} ${user.role}`}
+                type="button"
+                onClick={() => onChange(user.id)}
+                className={cn(
+                  'w-full text-left px-3 py-2.5 border-b last:border-b-0 hover:bg-muted/80 transition-colors',
+                  value === user.id && 'bg-primary/10 ring-1 ring-inset ring-primary'
+                )}
               >
-                <div className="flex flex-col items-start py-0.5">
-                  <span className="font-medium leading-tight">{user.name}</span>
-                  <span className="text-xs text-muted-foreground leading-tight">
-                    {user.email} · Role: {formatRoleLabel(user.role)}
-                  </span>
+                <div className="font-medium text-sm">{user.name}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  {user.email} · Role: {formatRoleLabel(user.role)}
                 </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+              </button>
+            ))
+          )}
+        </div>
       </div>
 
       {selected && (
         <div className="text-xs rounded-md border bg-muted/50 px-3 py-2 space-y-1">
           <p>
-            Assigned to user: <strong>{selected.name}</strong>
+            Selected: <strong>{selected.name}</strong>
           </p>
           <p className="text-muted-foreground">
-            Email: {selected.email} · Role: {formatRoleLabel(selected.role)}
+            {selected.email} · Role: {formatRoleLabel(selected.role)}
           </p>
         </div>
-      )}
-
-      <p className="text-xs text-muted-foreground">
-        Users come from <strong>User Management</strong>. Each task goes to one user — their
-        name and role are shown separately.
-      </p>
-
-      {eligibleUsers.length === 0 && (
-        <p className="text-xs text-destructive">
-          No users with worker, manager, or accountant role found. Create them under Users.
-        </p>
       )}
     </div>
   )
@@ -161,7 +183,8 @@ function priorityBadgeVariant(priority: TaskPriority) {
 
 export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>([])
-  const [eligibleUsers, setEligibleUsers] = useState<User[]>([])
+  const [eligibleUsers, setEligibleUsers] = useState<AssigneeUser[]>([])
+  const [loadingUsers, setLoadingUsers] = useState(false)
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -181,10 +204,60 @@ export default function Tasks() {
 
   useEffect(() => {
     fetchTasks()
-    if (canManage) {
+  }, [user])
+
+  const fetchAssignees = async () => {
+    setLoadingUsers(true)
+    try {
+      const users = await tasksService.getAssignees()
+      setEligibleUsers(users)
+    } catch {
+      // Fallback if /tasks/assignees not deployed yet
+      try {
+        const all = await authService.getUsers()
+        setEligibleUsers(
+          all
+            .filter(isEligibleAssignee)
+            .sort((a, b) => a.name.localeCompare(b.name))
+        )
+      } catch (error: unknown) {
+        toast({
+          title: 'Error',
+          description: formatApiError(error, 'Failed to load users for assignment'),
+          variant: 'destructive',
+        })
+        setEligibleUsers([])
+      }
+    } finally {
+      setLoadingUsers(false)
+    }
+  }
+
+  const openCreateDialog = (open: boolean) => {
+    setDialogOpen(open)
+    if (open && canManage) {
       fetchAssignees()
     }
-  }, [user, canManage])
+    if (!open) {
+      setFormData({
+        title: '',
+        description: '',
+        assigned_to_id: 0,
+        priority: 'medium',
+        due_date: '',
+      })
+    }
+  }
+
+  const openEditDialogState = (open: boolean) => {
+    setEditDialogOpen(open)
+    if (open && canManage) {
+      fetchAssignees()
+    }
+    if (!open) {
+      setSelectedTask(null)
+    }
+  }
 
   const fetchTasks = async () => {
     try {
@@ -198,23 +271,6 @@ export default function Tasks() {
       })
     } finally {
       setLoading(false)
-    }
-  }
-
-  const fetchAssignees = async () => {
-    try {
-      const all = await authService.getUsers()
-      setEligibleUsers(
-        all
-          .filter(isEligibleAssignee)
-          .sort((a, b) => a.name.localeCompare(b.name))
-      )
-    } catch (error: unknown) {
-      toast({
-        title: 'Error',
-        description: formatApiError(error, 'Failed to fetch users'),
-        variant: 'destructive',
-      })
     }
   }
 
@@ -317,6 +373,9 @@ export default function Tasks() {
       due_date: task.due_date || '',
     })
     setEditDialogOpen(true)
+    if (canManage) {
+      fetchAssignees()
+    }
   }
 
   if (loading) {
@@ -339,14 +398,14 @@ export default function Tasks() {
         }
         actions={
           canManage ? (
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={openCreateDialog}>
               <DialogTrigger asChild>
                 <Button className="w-full sm:w-auto">
                   <Plus className="mr-2 h-4 w-4" />
                   Assign Task
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Assign New Task</DialogTitle>
                   <DialogDescription>
@@ -379,6 +438,7 @@ export default function Tasks() {
                       value={formData.assigned_to_id}
                       onChange={(assigned_to_id) => setFormData({ ...formData, assigned_to_id })}
                       eligibleUsers={eligibleUsers}
+                      loadingUsers={loadingUsers}
                     />
                   </div>
                   <div className="space-y-2">
@@ -527,7 +587,7 @@ export default function Tasks() {
       </Card>
 
       {canManage && (
-        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <Dialog open={editDialogOpen} onOpenChange={openEditDialogState}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Edit Task</DialogTitle>
@@ -554,6 +614,7 @@ export default function Tasks() {
                   value={formData.assigned_to_id}
                   onChange={(assigned_to_id) => setFormData({ ...formData, assigned_to_id })}
                   eligibleUsers={eligibleUsers}
+                  loadingUsers={loadingUsers}
                 />
               </div>
               <div className="space-y-2">
