@@ -43,6 +43,104 @@ import { format } from 'date-fns'
 const STATUS_OPTIONS: TaskStatus[] = ['pending', 'in_progress', 'completed']
 const PRIORITY_OPTIONS: TaskPriority[] = ['low', 'medium', 'high']
 
+/** Roles that can receive an assigned task (matches backend). */
+const ASSIGNEE_ROLE_GROUPS = [
+  { key: 'worker' as const, label: 'Worker' },
+  { key: 'manager' as const, label: 'Manager' },
+  { key: 'accountant' as const, label: 'Accountant' },
+]
+
+type AssigneesByRole = Record<(typeof ASSIGNEE_ROLE_GROUPS)[number]['key'], User[]>
+
+const EMPTY_ASSIGNEES: AssigneesByRole = { worker: [], manager: [], accountant: [] }
+
+function formatRoleLabel(role: string) {
+  return role.charAt(0).toUpperCase() + role.slice(1)
+}
+
+function AssigneePicker({
+  value,
+  onChange,
+  assigneesByRole,
+}: {
+  value: number
+  onChange: (userId: number) => void
+  assigneesByRole: AssigneesByRole
+}) {
+  const [roleFilter, setRoleFilter] = useState<'all' | 'worker' | 'manager' | 'accountant'>('all')
+
+  const allEligible = ASSIGNEE_ROLE_GROUPS.flatMap((group) =>
+    assigneesByRole[group.key].map((u) => ({ user: u, role: group.key, roleLabel: group.label }))
+  ).sort((a, b) => a.user.name.localeCompare(b.user.name))
+
+  const filtered =
+    roleFilter === 'all'
+      ? allEligible
+      : allEligible.filter((entry) => entry.role === roleFilter)
+
+  const selected = allEligible.find((entry) => entry.user.id === value)
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-2">
+        <Label htmlFor="assignee-role-filter">Narrow list by role (optional)</Label>
+        <Select
+          value={roleFilter}
+          onValueChange={(v) => setRoleFilter(v as typeof roleFilter)}
+        >
+          <SelectTrigger id="assignee-role-filter">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All roles</SelectItem>
+            <SelectItem value="worker">Workers only</SelectItem>
+            <SelectItem value="manager">Managers only</SelectItem>
+            <SelectItem value="accountant">Accountants only</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="assignee-person">Select one person *</Label>
+        <Select
+          value={value > 0 ? value.toString() : undefined}
+          onValueChange={(v) => onChange(parseInt(v, 10))}
+        >
+          <SelectTrigger id="assignee-person">
+            <SelectValue placeholder="Choose a specific worker, manager, or accountant" />
+          </SelectTrigger>
+          <SelectContent>
+            {filtered.map(({ user, roleLabel }) => (
+              <SelectItem key={user.id} value={user.id.toString()}>
+                {user.name} · {roleLabel}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {selected && (
+        <p className="text-xs rounded-md border bg-muted/50 px-3 py-2">
+          This task will be assigned to{' '}
+          <strong>{selected.user.name}</strong> ({selected.roleLabel}){' '}
+          <strong>only</strong> — not shared with other workers or roles.
+        </p>
+      )}
+
+      <p className="text-xs text-muted-foreground">
+        Each task is for <strong>one specific person</strong>. Pick an individual worker,
+        manager, or accountant by name.
+      </p>
+
+      {allEligible.length === 0 && (
+        <p className="text-xs text-destructive">
+          No eligible users found. Add workers, managers, or accountants in User Management.
+        </p>
+      )}
+    </div>
+  )
+}
+
 function priorityBadgeVariant(priority: TaskPriority) {
   if (priority === 'high') return 'destructive'
   if (priority === 'medium') return 'secondary'
@@ -51,7 +149,7 @@ function priorityBadgeVariant(priority: TaskPriority) {
 
 export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>([])
-  const [assignees, setAssignees] = useState<User[]>([])
+  const [assigneesByRole, setAssigneesByRole] = useState<AssigneesByRole>(EMPTY_ASSIGNEES)
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -98,9 +196,11 @@ export default function Tasks() {
         authService.getUsers('manager'),
         authService.getUsers('accountant'),
       ])
-      const byId = new Map<number, User>()
-      ;[...workers, ...managers, ...accountants].forEach((u) => byId.set(u.id, u))
-      setAssignees(Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name)))
+      setAssigneesByRole({
+        worker: workers.sort((a, b) => a.name.localeCompare(b.name)),
+        manager: managers.sort((a, b) => a.name.localeCompare(b.name)),
+        accountant: accountants.sort((a, b) => a.name.localeCompare(b.name)),
+      })
     } catch (error: unknown) {
       toast({
         title: 'Error',
@@ -116,7 +216,11 @@ export default function Tasks() {
       return
     }
     if (!formData.assigned_to_id) {
-      toast({ title: 'Validation Error', description: 'Please select an assignee', variant: 'destructive' })
+      toast({
+        title: 'Validation Error',
+        description: 'Choose one specific worker, manager, or accountant for this task',
+        variant: 'destructive',
+      })
       return
     }
 
@@ -222,8 +326,8 @@ export default function Tasks() {
         title="Tasks"
         description={
           canManage
-            ? 'Assign and track work for your team'
-            : 'Tasks assigned to you'
+            ? 'Assign each task to one specific worker, manager, or accountant'
+            : 'Tasks assigned to you personally'
         }
         actions={
           canManage ? (
@@ -237,7 +341,10 @@ export default function Tasks() {
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>Assign New Task</DialogTitle>
-                  <DialogDescription>Create a task and assign it to a team member</DialogDescription>
+                  <DialogDescription>
+                    Pick exactly one person by name. The task is not sent to all workers or
+                    everyone with that role.
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
@@ -259,24 +366,12 @@ export default function Tasks() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Assign to *</Label>
-                    <Select
-                      value={formData.assigned_to_id > 0 ? formData.assigned_to_id.toString() : undefined}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, assigned_to_id: parseInt(value) })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select team member" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {assignees.map((a) => (
-                          <SelectItem key={a.id} value={a.id.toString()}>
-                            {a.name} ({a.role})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label>Assign to one person *</Label>
+                    <AssigneePicker
+                      value={formData.assigned_to_id}
+                      onChange={(assigned_to_id) => setFormData({ ...formData, assigned_to_id })}
+                      assigneesByRole={assigneesByRole}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Priority</Label>
@@ -328,8 +423,8 @@ export default function Tasks() {
               title="No tasks yet"
               description={
                 canManage
-                  ? 'Assign a task to a worker, manager, or accountant.'
-                  : 'You have no assigned tasks.'
+                  ? 'Assign a task to one specific worker, manager, or accountant by name.'
+                  : 'You have no tasks assigned to you yet.'
               }
             />
           ) : (
@@ -338,7 +433,8 @@ export default function Tasks() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Task</TableHead>
-                    {canManage && <TableHead>Assigned To</TableHead>}
+                    {canManage && <TableHead>Assigned person</TableHead>}
+                    {canManage && <TableHead>Role</TableHead>}
                     <TableHead>Priority</TableHead>
                     <TableHead>Due Date</TableHead>
                     <TableHead>Status</TableHead>
@@ -358,6 +454,15 @@ export default function Tasks() {
                       </TableCell>
                       {canManage && (
                         <TableCell>{task.assigned_to_name || `#${task.assigned_to_id}`}</TableCell>
+                      )}
+                      {canManage && (
+                        <TableCell>
+                          {task.assigned_to_role ? (
+                            <Badge variant="outline">{formatRoleLabel(task.assigned_to_role)}</Badge>
+                          ) : (
+                            '—'
+                          )}
+                        </TableCell>
                       )}
                       <TableCell>
                         <Badge variant={priorityBadgeVariant(task.priority)}>{task.priority}</Badge>
@@ -432,24 +537,12 @@ export default function Tasks() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Assign to</Label>
-                <Select
-                  value={formData.assigned_to_id.toString()}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, assigned_to_id: parseInt(value) })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {assignees.map((a) => (
-                      <SelectItem key={a.id} value={a.id.toString()}>
-                        {a.name} ({a.role})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Assign to one person</Label>
+                <AssigneePicker
+                  value={formData.assigned_to_id}
+                  onChange={(assigned_to_id) => setFormData({ ...formData, assigned_to_id })}
+                  assigneesByRole={assigneesByRole}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Priority</Label>

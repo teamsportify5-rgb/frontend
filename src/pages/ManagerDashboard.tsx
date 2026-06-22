@@ -285,7 +285,9 @@ export default function ManagerDashboard() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>Tasks & Activities</CardTitle>
-            <CardDescription>Assigned tasks and their status</CardDescription>
+            <CardDescription>
+              Each task is assigned to one specific person (worker, manager, or accountant)
+            </CardDescription>
           </div>
           <Button variant="outline" size="sm" asChild>
             <Link to="/tasks">Manage Tasks</Link>
@@ -304,7 +306,8 @@ export default function ManagerDashboard() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Task</TableHead>
-                  <TableHead>Assigned To</TableHead>
+                  <TableHead>Assigned person</TableHead>
+                  <TableHead>Role</TableHead>
                   <TableHead>Priority</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
@@ -314,6 +317,13 @@ export default function ManagerDashboard() {
                   <TableRow key={task.id}>
                     <TableCell className="font-medium">{task.title}</TableCell>
                     <TableCell>{task.assigned_to_name || `#${task.assigned_to_id}`}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {task.assigned_to_role
+                          ? task.assigned_to_role.charAt(0).toUpperCase() + task.assigned_to_role.slice(1)
+                          : '—'}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       <Badge variant={
                         task.priority === 'high' ? 'destructive' :

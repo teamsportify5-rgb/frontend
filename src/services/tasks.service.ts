@@ -9,6 +9,7 @@ export interface Task {
   description?: string | null
   assigned_to_id: number
   assigned_to_name?: string | null
+  assigned_to_role?: string | null
   assigned_by_id?: number | null
   assigned_by_name?: string | null
   status: TaskStatus
