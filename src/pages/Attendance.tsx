@@ -13,6 +13,7 @@ import { attendanceService, Attendance as AttendanceType } from '@/services/atte
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { LogIn, LogOut } from 'lucide-react'
+import { PageHeader } from '@/components/PageHeader'
 
 export default function Attendance() {
   const [attendance, setAttendance] = useState<AttendanceType[]>([])
@@ -96,17 +97,17 @@ export default function Attendance() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Attendance</h1>
-          <p className="text-gray-600 mt-2">Track employee attendance and check-ins</p>
-        </div>
-        {user?.role !== 'customer' && (
-          <div className="flex gap-2">
+      <PageHeader
+        title="Attendance"
+        description="Track employee attendance and check-ins"
+        actions={
+          user?.role !== 'customer' ? (
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
             <Button
               onClick={handleCheckIn}
               disabled={!canCheckIn}
               variant={canCheckIn ? 'default' : 'outline'}
+              className="w-full sm:w-auto"
             >
               <LogIn className="mr-2 h-4 w-4" />
               Check In
@@ -115,13 +116,15 @@ export default function Attendance() {
               onClick={handleCheckOut}
               disabled={!canCheckOut}
               variant={canCheckOut ? 'default' : 'outline'}
+              className="w-full sm:w-auto"
             >
               <LogOut className="mr-2 h-4 w-4" />
               Check Out
             </Button>
           </div>
-        )}
-      </div>
+          ) : undefined
+        }
+      />
 
       {myAttendance && (
         <Card>

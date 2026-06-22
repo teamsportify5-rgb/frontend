@@ -116,7 +116,7 @@ export function ForcePasswordChange() {
             />
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={submitting} className="w-full">
+                <Button type="submit" disabled={submitting} className="w-full">
               {submitting ? 'Saving...' : 'Update password'}
             </Button>
           </DialogFooter>

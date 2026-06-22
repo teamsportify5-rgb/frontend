@@ -31,6 +31,7 @@ import { ordersService, Order, CreateOrder, UpdateOrder } from '@/services/order
 import { authService, User } from '@/services/auth.service'
 import { useToast } from '@/hooks/use-toast'
 import { Plus, Pencil, Trash2, Package } from 'lucide-react'
+import { PageHeader } from '@/components/PageHeader'
 import { useAuth } from '@/contexts/AuthContext'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -241,13 +242,12 @@ export default function Orders() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Orders</h1>
-          <p className="text-gray-600 mt-2">Manage and track all orders</p>
-        </div>
-              {(user?.role === 'admin' || user?.role === 'manager') && (
-                <Dialog 
+      <PageHeader
+        title="Orders"
+        description="Manage and track all orders"
+        actions={
+          (user?.role === 'admin' || user?.role === 'manager') ? (
+                <Dialog
                   open={dialogOpen} 
                   onOpenChange={(open) => {
                     setDialogOpen(open)
@@ -258,12 +258,12 @@ export default function Orders() {
                   }}
                 >
                   <DialogTrigger asChild>
-                    <Button>
+                    <Button className="w-full sm:w-auto">
                       <Plus className="mr-2 h-4 w-4" />
                       New Order
                     </Button>
                   </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Create New Order</DialogTitle>
                 <DialogDescription>Add a new order to the system</DialogDescription>
@@ -348,8 +348,9 @@ export default function Orders() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        )}
-      </div>
+          ) : undefined
+        }
+      />
 
       <Card>
         <CardHeader>

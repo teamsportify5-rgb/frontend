@@ -122,7 +122,7 @@ export default function Settings() {
           <CardDescription>Basic system settings</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="systemName">System Name</Label>
               <Input
@@ -169,7 +169,7 @@ export default function Settings() {
           <CardDescription>Configure payroll calculations and defaults</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="defaultSalary">Default Salary</Label>
               <Input
@@ -306,7 +306,7 @@ export default function Settings() {
           <CardDescription>Configure security and authentication</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="sessionTimeout">Session Timeout (minutes)</Label>
               <Input

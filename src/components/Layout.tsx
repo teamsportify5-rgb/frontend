@@ -224,7 +224,7 @@ export default function Layout({ children }: LayoutProps) {
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className="min-w-0 overflow-x-hidden lg:pl-64">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:hidden">
           <Button
             type="button"
@@ -238,7 +238,7 @@ export default function Layout({ children }: LayoutProps) {
           </Button>
           <span className="truncate text-lg font-semibold">Sportify</span>
         </header>
-        <main className="px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        <main className="px-3 py-4 sm:px-6 sm:py-8 lg:px-8">
           {children}
         </main>
       </div>

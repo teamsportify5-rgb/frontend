@@ -22,6 +22,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Warehouse, Plus, AlertTriangle, Package, Pencil, Trash2 } from 'lucide-react'
+import { PageHeader } from '@/components/PageHeader'
 import {
   inventoryService,
   Inventory as InventoryType,
@@ -201,20 +202,19 @@ export default function Inventory() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Inventory Management</h1>
-          <p className="text-gray-600 mt-2">Manage stock levels and inventory value</p>
-        </div>
-        {(user?.role === 'admin' || user?.role === 'manager') && (
+      <PageHeader
+        title="Inventory Management"
+        description="Manage stock levels and inventory value"
+        actions={
+          (user?.role === 'admin' || user?.role === 'manager') ? (
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Item
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Add Inventory Item</DialogTitle>
                 <DialogDescription>Add a new item to inventory</DialogDescription>
@@ -236,7 +236,7 @@ export default function Inventory() {
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="quantity">Quantity *</Label>
                     <Input
@@ -287,8 +287,9 @@ export default function Inventory() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        )}
-      </div>
+          ) : undefined
+        }
+      />
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -397,7 +398,7 @@ export default function Inventory() {
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Inventory Item</DialogTitle>
             <DialogDescription>Update inventory item details</DialogDescription>
@@ -419,7 +420,7 @@ export default function Inventory() {
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="edit_quantity">Quantity *</Label>
                 <Input

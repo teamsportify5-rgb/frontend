@@ -33,6 +33,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { settingsService } from '@/services/settings.service'
 import { Download, Plus, Pencil, RefreshCw, Trash2 } from 'lucide-react'
+import { PageHeader } from '@/components/PageHeader'
 
 export default function Payroll() {
   const [payrolls, setPayrolls] = useState<PayrollType[]>([])
@@ -283,22 +284,22 @@ export default function Payroll() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Payroll</h1>
-          <p className="text-gray-600 mt-2">Manage employee payroll and salary slips</p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => fetchPayrolls()}
-            disabled={loading}
-          >
-            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          {canGenerate && (
-          <Dialog 
+      <PageHeader
+        title="Payroll"
+        description="Manage employee payroll and salary slips"
+        actions={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => fetchPayrolls()}
+              disabled={loading}
+              className="w-full sm:w-auto"
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            {canGenerate && (
+          <Dialog
             open={dialogOpen} 
             onOpenChange={(open) => {
               setDialogOpen(open)
@@ -317,12 +318,12 @@ export default function Payroll() {
             }}
           >
             <DialogTrigger asChild>
-              <Button>
+              <Button className="w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 Generate Payroll
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Generate Payroll</DialogTitle>
                 <DialogDescription>Generate payroll for an employee</DialogDescription>
@@ -445,9 +446,10 @@ export default function Payroll() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-          )}
-        </div>
-      </div>
+            )}
+          </>
+        }
+      />
 
       <Card>
         <CardHeader>

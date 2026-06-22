@@ -84,16 +84,16 @@ export default function Login() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="w-full max-w-md px-4">
+    <div className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-background via-background to-muted/20 px-4 py-8">
+      <div className="w-full max-w-md">
         {/* System Branding */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6 sm:mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="flex items-center justify-center w-16 h-16 rounded-xl bg-primary text-primary-foreground shadow-lg">
-              <Package className="h-8 w-8" />
+            <div className="flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-primary text-primary-foreground shadow-lg">
+              <Package className="h-7 w-7 sm:h-8 sm:w-8" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">
+          <h1 className="text-2xl font-bold tracking-tight mb-2 sm:text-3xl">
             Sportify Management System
           </h1>
           <p className="text-muted-foreground">
