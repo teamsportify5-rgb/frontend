@@ -59,6 +59,11 @@ export const inventoryService = {
     return response.data
   },
 
+  getLowStock: async (): Promise<Inventory[]> => {
+    const response = await api.get<Inventory[]>('/inventory/low-stock')
+    return response.data
+  },
+
   getById: async (id: number): Promise<Inventory> => {
     const response = await api.get<Inventory>(`/inventory/${id}`)
     return response.data

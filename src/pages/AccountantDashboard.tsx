@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { payrollService, Payroll } from '@/services/payroll.service'
-import { authService, User } from '@/services/auth.service'
+import { groupPayrollByMonth } from '@/lib/dashboardData'
 import { useToast } from '@/hooks/use-toast'
 import {
   DollarSign,
@@ -48,10 +48,10 @@ import {
   ResponsiveContainer,
   Legend
 } from 'recharts'
-import { format } from 'date-fns'
+import { format, parse } from 'date-fns'
 
 export default function AccountantDashboard() {
-  const [employees, setEmployees] = useState<User[]>([])
+  const [employees, setEmployees] = useState<{ id: number; name: string; email: string; role: string }[]>([])
   const [payrollRecords, setPayrollRecords] = useState<Payroll[]>([])
   const [loading, setLoading] = useState(true)
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false)
@@ -62,23 +62,12 @@ export default function AccountantDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [employeesData, workersData] = await Promise.all([
-          authService.getUsers('worker'),
-          authService.getUsers('accountant'),
+        const [employeesData, payrollData] = await Promise.all([
+          payrollService.getEmployees(),
+          payrollService.getAll(),
         ])
-        setEmployees([...employeesData, ...workersData])
-        
-        // Fetch payroll for all employees
-        const allPayrolls: Payroll[] = []
-        for (const emp of employeesData) {
-          try {
-            const payrolls = await payrollService.getByEmployee(emp.id)
-            allPayrolls.push(...payrolls)
-          } catch (error) {
-            // Employee may not have payroll records yet
-          }
-        }
-        setPayrollRecords(allPayrolls)
+        setEmployees(employeesData)
+        setPayrollRecords(payrollData)
       } catch (error) {
         console.error('Error fetching data:', error)
         toast({
@@ -114,12 +103,8 @@ export default function AccountantDashboard() {
       setSelectedEmployee(null)
       setSelectedMonth('')
       
-      // Refresh payroll records
-      const payrolls = await payrollService.getByEmployee(selectedEmployee)
-      setPayrollRecords(prev => {
-        const filtered = prev.filter(p => p.employee_id !== selectedEmployee)
-        return [...filtered, ...payrolls]
-      })
+      const payrollData = await payrollService.getAll()
+      setPayrollRecords(payrollData)
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -159,13 +144,10 @@ export default function AccountantDashboard() {
   const totalBonus = payrollRecords.reduce((sum, p) => sum + p.bonus, 0)
   const totalNetPay = payrollRecords.reduce((sum, p) => sum + p.net_pay, 0)
 
-  // Monthly payroll summary (mock data for chart)
-  const monthlyData = [
-    { month: 'Jan', total: 45000, deductions: 5000, net: 40000 },
-    { month: 'Feb', total: 48000, deductions: 5200, net: 42800 },
-    { month: 'Mar', total: 47000, deductions: 5100, net: 41900 },
-    { month: 'Apr', total: 49000, deductions: 5300, net: 43700 },
-  ]
+  const monthlyData = groupPayrollByMonth(payrollRecords).map((row) => ({
+    ...row,
+    month: format(parse(`${row.month}-01`, 'yyyy-MM-dd', new Date()), 'MMM yyyy'),
+  }))
 
   // Get current month
   const currentMonth = format(new Date(), 'yyyy-MM')
@@ -302,6 +284,11 @@ export default function AccountantDashboard() {
           <CardDescription>Payroll trends over time</CardDescription>
         </CardHeader>
         <CardContent>
+          {monthlyData.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-12">
+              No payroll records yet. Generate payroll to see trends.
+            </p>
+          ) : (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -314,6 +301,7 @@ export default function AccountantDashboard() {
               <Bar dataKey="net" fill="#22c55e" name="Net Pay" />
             </BarChart>
           </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
 
@@ -330,9 +318,9 @@ export default function AccountantDashboard() {
                 <TableHead>Employee ID</TableHead>
                 <TableHead>Month</TableHead>
                 <TableHead>Basic Salary</TableHead>
-                <TableHead>Allowances</TableHead>
+                <TableHead>Bonus</TableHead>
                 <TableHead>Deductions</TableHead>
-                <TableHead>Overtime</TableHead>
+                <TableHead>Days Present</TableHead>
                 <TableHead>Net Pay</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -359,10 +347,7 @@ export default function AccountantDashboard() {
                       <TableCell>
                         <span className="text-red-600">-${payroll.deductions.toLocaleString()}</span>
                       </TableCell>
-                      <TableCell>
-                        {/* Overtime calculation would be here */}
-                        <span className="text-blue-600">${(payroll.bonus * 0.5).toFixed(2)}</span>
-                      </TableCell>
+                      <TableCell>{payroll.days_present}</TableCell>
                       <TableCell className="font-semibold">
                         ${payroll.net_pay.toLocaleString()}
                       </TableCell>
@@ -395,43 +380,15 @@ export default function AccountantDashboard() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Allowances Summary</CardTitle>
-            <CardDescription>Total allowances by category</CardDescription>
+            <CardTitle>Bonus Summary</CardTitle>
+            <CardDescription>Total bonus across all payroll records</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Housing Allowance</span>
-                <span className="font-semibold text-green-600">
-                  ${(totalBonus * 0.4).toLocaleString()}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Transport Allowance</span>
-                <span className="font-semibold text-green-600">
-                  ${(totalBonus * 0.3).toLocaleString()}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Medical Allowance</span>
-                <span className="font-semibold text-green-600">
-                  ${(totalBonus * 0.2).toLocaleString()}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Other Allowances</span>
-                <span className="font-semibold text-green-600">
-                  ${(totalBonus * 0.1).toLocaleString()}
-                </span>
-              </div>
-              <div className="pt-4 border-t">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold">Total Allowances</span>
-                  <span className="font-bold text-green-600 text-lg">
-                    ${totalBonus.toLocaleString()}
-                  </span>
-                </div>
-              </div>
+            <div className="flex items-center justify-between">
+              <span className="font-semibold">Total Bonus</span>
+              <span className="font-bold text-green-600 text-lg">
+                ${totalBonus.toLocaleString()}
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -439,42 +396,14 @@ export default function AccountantDashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Deductions Summary</CardTitle>
-            <CardDescription>Total deductions by category</CardDescription>
+            <CardDescription>Total deductions across all payroll records</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Tax Deductions</span>
-                <span className="font-semibold text-red-600">
-                  ${(totalDeductions * 0.5).toLocaleString()}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Insurance</span>
-                <span className="font-semibold text-red-600">
-                  ${(totalDeductions * 0.3).toLocaleString()}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Provident Fund</span>
-                <span className="font-semibold text-red-600">
-                  ${(totalDeductions * 0.15).toLocaleString()}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Other Deductions</span>
-                <span className="font-semibold text-red-600">
-                  ${(totalDeductions * 0.05).toLocaleString()}
-                </span>
-              </div>
-              <div className="pt-4 border-t">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold">Total Deductions</span>
-                  <span className="font-bold text-red-600 text-lg">
-                    ${totalDeductions.toLocaleString()}
-                  </span>
-                </div>
-              </div>
+            <div className="flex items-center justify-between">
+              <span className="font-semibold">Total Deductions</span>
+              <span className="font-bold text-red-600 text-lg">
+                ${totalDeductions.toLocaleString()}
+              </span>
             </div>
           </CardContent>
         </Card>

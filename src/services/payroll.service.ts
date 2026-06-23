@@ -58,6 +58,13 @@ export const payrollService = {
   delete: async (payrollId: number): Promise<void> => {
     await api.delete(`/payroll/delete/${payrollId}`)
   },
+
+  getEmployees: async (): Promise<
+    { id: number; name: string; email: string; role: string; daily_rate?: number }[]
+  > => {
+    const response = await api.get('/payroll/employees')
+    return response.data
+  },
 }
 
 

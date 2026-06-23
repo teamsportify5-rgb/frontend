@@ -20,24 +20,24 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { payrollService, Payroll as PayrollType, UpdatePayrollRequest } from '@/services/payroll.service'
 import { authService, User } from '@/services/auth.service'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { settingsService } from '@/services/settings.service'
-import { Download, Plus, Pencil, RefreshCw, Trash2 } from 'lucide-react'
+import { Download, Plus, Pencil, RefreshCw, Trash2, Search } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
+import { cn } from '@/lib/utils'
+
+function formatRoleLabel(role: string) {
+  return role.charAt(0).toUpperCase() + role.slice(1)
+}
 
 export default function Payroll() {
   const [payrolls, setPayrolls] = useState<PayrollType[]>([])
   const [workers, setWorkers] = useState<User[]>([])
+  const [loadingEmployees, setLoadingEmployees] = useState(false)
+  const [employeeSearch, setEmployeeSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -99,19 +99,31 @@ export default function Payroll() {
   }
 
   const fetchWorkers = async () => {
+    setLoadingEmployees(true)
     try {
-      // Fetch all workers and employees (excluding customers)
-      const allUsers = await authService.getUsers()
-      const workersList = allUsers.filter(
-        (u) => u.role === 'worker' || u.role === 'manager' || u.role === 'accountant' || u.role === 'admin'
-      )
-      setWorkers(workersList)
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.response?.data?.detail || 'Failed to fetch workers',
-        variant: 'destructive',
-      })
+      const employees = await payrollService.getEmployees()
+      setWorkers(employees as User[])
+    } catch {
+      try {
+        const allUsers = await authService.getUsers()
+        const workersList = allUsers.filter(
+          (u) =>
+            u.role === 'worker' ||
+            u.role === 'manager' ||
+            u.role === 'accountant' ||
+            u.role === 'admin'
+        )
+        setWorkers(workersList)
+      } catch (error: any) {
+        toast({
+          title: 'Error',
+          description: error.response?.data?.detail || 'Failed to fetch employees',
+          variant: 'destructive',
+        })
+        setWorkers([])
+      }
+    } finally {
+      setLoadingEmployees(false)
     }
   }
 
@@ -304,16 +316,15 @@ export default function Payroll() {
             onOpenChange={(open) => {
               setDialogOpen(open)
               if (open) {
-                // Refresh workers list when dialog opens
                 fetchWorkers()
               } else {
-                // Reset form when dialog closes
                 setSelectedEmployee(null)
                 setMonth('')
                 setDaysPresent('')
                 setBasicSalary('')
                 setDeductions('')
                 setBonus('')
+                setEmployeeSearch('')
               }
             }}
           >
@@ -323,40 +334,65 @@ export default function Payroll() {
                 Generate Payroll
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Generate Payroll</DialogTitle>
-                <DialogDescription>Generate payroll for an employee</DialogDescription>
+                <DialogDescription>
+                  Select any staff member — worker, manager, accountant, or admin
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="employee_id">Select Worker *</Label>
-                  <Select
-                    value={selectedEmployee ? selectedEmployee.toString() : undefined}
-                    onValueChange={(value) => setSelectedEmployee(parseInt(value))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a worker" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {workers.length > 0 ? (
-                        workers.map((worker) => (
-                          <SelectItem key={worker.id} value={worker.id.toString()}>
-                            {worker.name} ({worker.email}) - {worker.role}
-                          </SelectItem>
+                  <Label>Select employee *</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {loadingEmployees
+                      ? 'Loading employees…'
+                      : `${workers.length} employee(s) eligible for payroll`}
+                  </p>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      className="pl-9"
+                      placeholder="Search by name, email, or role"
+                      value={employeeSearch}
+                      onChange={(e) => setEmployeeSearch(e.target.value)}
+                    />
+                  </div>
+                  <div className="rounded-md border max-h-52 overflow-y-auto">
+                    {loadingEmployees ? (
+                      <p className="p-4 text-sm text-muted-foreground text-center">Loading…</p>
+                    ) : workers.length === 0 ? (
+                      <p className="p-4 text-sm text-muted-foreground text-center">No employees found</p>
+                    ) : (
+                      workers
+                        .filter((w) => {
+                          const q = employeeSearch.trim().toLowerCase()
+                          if (!q) return true
+                          return (
+                            w.name.toLowerCase().includes(q) ||
+                            w.email.toLowerCase().includes(q) ||
+                            w.role.toLowerCase().includes(q)
+                          )
+                        })
+                        .map((worker) => (
+                          <button
+                            key={worker.id}
+                            type="button"
+                            onClick={() => setSelectedEmployee(worker.id)}
+                            className={cn(
+                              'w-full text-left px-3 py-2.5 border-b last:border-b-0 hover:bg-muted/80 transition-colors',
+                              selectedEmployee === worker.id && 'bg-primary/10 ring-1 ring-inset ring-primary'
+                            )}
+                          >
+                            <div className="font-medium text-sm">{worker.name}</div>
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              {worker.email} · Role: {formatRoleLabel(worker.role)}
+                              {worker.daily_rate ? ` · Rs ${worker.daily_rate.toLocaleString()}/day` : ''}
+                            </div>
+                          </button>
                         ))
-                      ) : (
-                        <SelectItem value="no-workers" disabled>
-                          No workers found
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  {workers.length === 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      No workers found. Please add workers first.
-                    </p>
-                  )}
+                    )}
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="month">Month (YYYY-MM)</Label>

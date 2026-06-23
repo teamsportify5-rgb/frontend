@@ -15,6 +15,8 @@ import { attendanceService, Attendance } from '@/services/attendance.service'
 import { tasksService, Task } from '@/services/tasks.service'
 import { ordersService, Order } from '@/services/orders.service'
 import { authService, User } from '@/services/auth.service'
+import { inventoryService, Inventory } from '@/services/inventory.service'
+import { mapInventoryToStockAlert } from '@/lib/dashboardData'
 import {
   Users,
   Clock,
@@ -41,21 +43,24 @@ export default function ManagerDashboard() {
   const [orders, setOrders] = useState<Order[]>([])
   const [workers, setWorkers] = useState<User[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
+  const [lowStockItems, setLowStockItems] = useState<Inventory[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [attendanceData, ordersData, workersData, tasksData] = await Promise.all([
+        const [attendanceData, ordersData, workersData, tasksData, stockData] = await Promise.all([
           attendanceService.getToday(),
           ordersService.getAll(),
           authService.getUsers('worker'),
           tasksService.getAll(),
+          inventoryService.getLowStock(),
         ])
         setAttendance(attendanceData)
         setOrders(ordersData)
         setWorkers(workersData)
         setTasks(tasksData)
+        setLowStockItems(stockData)
       } catch (error) {
         console.error('Error fetching data:', error)
       } finally {
@@ -78,20 +83,19 @@ export default function ManagerDashboard() {
   const completedOrders = orders.filter(o => o.status === 'completed').length
   const delayedOrders = orders.filter(o => o.status === 'delayed').length
 
-  // Mock Stock Alerts (would come from inventory API)
-  const stockAlerts = [
-    { item: 'Steel Sheets', current: 50, threshold: 100, status: 'low' },
-    { item: 'Bolts', current: 200, threshold: 500, status: 'low' },
-    { item: 'Paint', current: 15, threshold: 20, status: 'critical' },
-  ]
+  const stockAlerts = lowStockItems.map(mapInventoryToStockAlert)
 
-  // Worker Performance Data (mock - would come from performance API)
-  const workerPerformance = workers.slice(0, 5).map(worker => ({
-    name: worker.name,
-    ordersCompleted: Math.floor(Math.random() * 20) + 10,
-    attendanceRate: Math.floor(Math.random() * 30) + 70,
-    efficiency: Math.floor(Math.random() * 20) + 80,
-  }))
+  const workerPerformance = workers.slice(0, 8).map(worker => {
+    const assigned = tasks.filter(t => t.assigned_to_id === worker.id)
+    const completed = assigned.filter(t => t.status === 'completed').length
+    const inProgress = assigned.filter(t => t.status === 'in_progress').length
+    return {
+      name: worker.name.split(' ')[0],
+      tasksCompleted: completed,
+      tasksInProgress: inProgress,
+      completionRate: assigned.length > 0 ? Math.round((completed / assigned.length) * 100) : 0,
+    }
+  })
 
   // Attendance Chart Data
   const attendanceChartData = [
@@ -249,6 +253,14 @@ export default function ManagerDashboard() {
           <CardDescription>Items requiring immediate attention</CardDescription>
         </CardHeader>
         <CardContent>
+          {stockAlerts.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              All inventory items are above their reorder thresholds.{' '}
+              <Link to="/inventory" className="text-primary underline">
+                View inventory
+              </Link>
+            </p>
+          ) : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -260,23 +272,26 @@ export default function ManagerDashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {stockAlerts.map((alert, index) => (
-                <TableRow key={index}>
+              {stockAlerts.map((alert) => (
+                <TableRow key={alert.id}>
                   <TableCell className="font-medium">{alert.item}</TableCell>
-                  <TableCell>{alert.current} units</TableCell>
-                  <TableCell>{alert.threshold} units</TableCell>
+                  <TableCell>{alert.current} {alert.unit}</TableCell>
+                  <TableCell>{alert.threshold} {alert.unit}</TableCell>
                   <TableCell>
                     <Badge variant={alert.status === 'critical' ? 'destructive' : 'secondary'}>
                       {alert.status === 'critical' ? 'Critical' : 'Low'}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Button variant="outline" size="sm">Reorder</Button>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to="/inventory">Manage</Link>
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -352,9 +367,14 @@ export default function ManagerDashboard() {
       <Card>
         <CardHeader>
           <CardTitle>Worker Performance</CardTitle>
-          <CardDescription>Top performers this month</CardDescription>
+          <CardDescription>Task completion by worker</CardDescription>
         </CardHeader>
         <CardContent>
+          {workerPerformance.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              No worker task data available yet.
+            </p>
+          ) : (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={workerPerformance}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -362,11 +382,12 @@ export default function ManagerDashboard() {
               <YAxis />
               <Tooltip />
               <Legend />
-              <Bar dataKey="ordersCompleted" fill="#8884d8" name="Orders Completed" />
-              <Bar dataKey="attendanceRate" fill="#82ca9d" name="Attendance %" />
-              <Bar dataKey="efficiency" fill="#ffc658" name="Efficiency %" />
+              <Bar dataKey="tasksCompleted" fill="#22c55e" name="Completed" />
+              <Bar dataKey="tasksInProgress" fill="#3b82f6" name="In Progress" />
+              <Bar dataKey="completionRate" fill="#8884d8" name="Completion %" />
             </BarChart>
           </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
     </div>
