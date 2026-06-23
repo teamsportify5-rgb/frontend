@@ -35,6 +35,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { useAuth } from '@/contexts/AuthContext'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
+import { ProductCombobox } from '@/components/ProductCombobox'
 
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([])
@@ -292,29 +293,12 @@ export default function Orders() {
                     </p>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="product">Product *</Label>
-                  <Select
-                    value={formData.product}
-                    onValueChange={(value) => setFormData({ ...formData, product: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a product" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products.map((product) => (
-                        <SelectItem key={product} value={product}>
-                          {product}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {products.length === 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      Loading products...
-                    </p>
-                  )}
-                </div>
+                <ProductCombobox
+                  id="product"
+                  value={formData.product}
+                  onChange={(product) => setFormData({ ...formData, product })}
+                  products={products}
+                />
                 <div className="space-y-2">
                   <Label htmlFor="quantity">Quantity</Label>
                   <Input
@@ -447,21 +431,26 @@ export default function Orders() {
         </CardContent>
       </Card>
 
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+      <Dialog
+        open={editDialogOpen}
+        onOpenChange={(open) => {
+          setEditDialogOpen(open)
+          if (open) fetchProducts()
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Order</DialogTitle>
             <DialogDescription>Update order details</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit_product">Product</Label>
-              <Input
-                id="edit_product"
-                value={formData.product}
-                onChange={(e) => setFormData({ ...formData, product: e.target.value })}
-              />
-            </div>
+            <ProductCombobox
+              id="edit_product"
+              label="Product"
+              value={formData.product}
+              onChange={(product) => setFormData({ ...formData, product })}
+              products={products}
+            />
             <div className="space-y-2">
               <Label htmlFor="edit_quantity">Quantity</Label>
               <Input
