@@ -56,6 +56,7 @@ const managerNavigation = [
   { name: 'Attendance', href: '/attendance', icon: Clock },
   { name: 'Orders', href: '/orders', icon: Package },
   { name: 'Tasks', href: '/tasks', icon: ClipboardList },
+  { name: 'Inventory', href: '/inventory', icon: Warehouse },
   { name: 'AI Image', href: '/ai-image', icon: Wand2 },
   { name: 'Notifications', href: '/notifications', icon: Bell },
   { name: 'Profile', href: '/profile', icon: User },
